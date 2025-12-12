@@ -244,4 +244,28 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
 
         emit AutoSaveExecuted(user, amount, msg.sender);
     }
+
+    // =============================================================
+    //                     VIEW FUNCTIONS
+    // =============================================================
+
+    /**
+     * @notice Get user account details
+     * @param user Address of user
+     * @return User's account struct
+     */
+    function getAccount(address user) external view returns (UserAccount memory) {
+        return accounts[user];
+    }
+
+    /**
+     * @notice Check if user can be auto-saved (passed rate limit)
+     * @param user Address of user
+     * @return bool Whether save is allowed
+     */
+    function canAutoSave(address user) external view returns (bool) {
+        UserAccount memory account = accounts[user];
+        if (!account.isActive) return false;
+        return block.timestamp >= account.lastSaveTimestamp + MIN_SAVE_INTERVAL;
+    }
 }
