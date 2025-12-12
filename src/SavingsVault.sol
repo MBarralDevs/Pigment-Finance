@@ -43,7 +43,62 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
 
     /// @notice USDC token (we'll use Cronos testnet USDC)
     IERC20 public immutable usdc;
+
+    /// @notice Yield strategy contract (will be set after deployment)
+    address public yieldStrategy;
+
+    /// @notice x402 executor contract (authorized to trigger auto-saves)
+    address public x402Executor;
+
+    /// @notice Mapping of user address to their account
+    mapping(address => UserAccount) public accounts;
+
+    /// @notice Total value locked in the vault (excludes funds in yield strategy)
+    uint256 public totalValueLocked;
+
+    /// @notice Minimum deposit amount (prevents dust attacks)
+    uint256 public constant MIN_DEPOSIT = 1e6; // 1 USDC
+
+    /// @notice Maximum single save amount (security limit)
+    uint256 public constant MAX_SAVE_AMOUNT = 10000e6; // 10,000 USDC
+
+    /// @notice Minimum time between auto-saves per user (rate limiting)
+    uint256 public constant MIN_SAVE_INTERVAL = 1 days;
+
+    // =============================================================
+    //                          EVENTS
+    // =============================================================
+
+    event AccountCreated(address indexed user, uint256 weeklyGoal, uint256 safetyBuffer, TrustMode trustMode);
+
+    event Deposited(address indexed user, uint256 amount, uint256 newBalance);
+
+    event Withdrawn(address indexed user, uint256 amount, uint256 newBalance);
+
+    event AutoSaveExecuted(address indexed user, uint256 amount, address triggeredBy);
+
+    event GoalUpdated(address indexed user, uint256 newWeeklyGoal);
+
+    event TrustModeUpdated(address indexed user, TrustMode newMode);
+
+    event YieldStrategyUpdated(address indexed oldStrategy, address indexed newStrategy);
+
+    event X402ExecutorUpdated(address indexed oldExecutor, address indexed newExecutor);
+
+    // =============================================================
+    //                          ERRORS
+    // =============================================================
+
+    error SavingsVault__InvalidAmount();
+    error SavingsVault__InsufficientBalance();
+    error SavingsVault__AccountNotActive();
+    error SavingsVault__UnauthorizedCaller();
+    error SavingsVault__SaveIntervalNotMet();
+    error SavingsVault__AmountExceedsLimit();
     error SavingsVault__ZeroAddress();
+    error SavingsVault__GoalNotPositive();
+    error SavingsVault__AccountAlreadyExists();
+    error SavingsVault__EnforcedPause();
 
     // =============================================================
     //                        CONSTRUCTOR
