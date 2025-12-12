@@ -179,4 +179,27 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
 
         emit Withdrawn(msg.sender, amount, accounts[msg.sender].currentBalance);
     }
+
+    /**
+     * @notice Update weekly savings goal
+     * @param newWeeklyGoal New target amount per week
+     */
+    function updateGoal(uint256 newWeeklyGoal) external {
+        if (!accounts[msg.sender].isActive) revert SavingsVault__AccountNotActive();
+        if (newWeeklyGoal <= 0) revert SavingsVault__GoalNotPositive();
+
+        accounts[msg.sender].weeklyGoal = newWeeklyGoal;
+        emit GoalUpdated(msg.sender, newWeeklyGoal);
+    }
+
+    /**
+     * @notice Update trust mode (manual vs auto)
+     * @param newMode New trust mode
+     */
+    function updateTrustMode(TrustMode newMode) external {
+        if (!accounts[msg.sender].isActive) revert SavingsVault__AccountNotActive();
+
+        accounts[msg.sender].trustMode = newMode;
+        emit TrustModeUpdated(msg.sender, newMode);
+    }
 }
