@@ -139,4 +139,23 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
 
         emit AccountCreated(msg.sender, weeklyGoal, safetyBuffer, trustMode);
     }
+
+    /**
+     * @notice Deposit USDC into the vault
+     * @param amount Amount of USDC to deposit (6 decimals)
+     */
+    function deposit(uint256 amount) external nonReentrant whenNotPaused {
+        if (amount < MIN_DEPOSIT) revert SavingsVault__InvalidAmount();
+        if (!accounts[msg.sender].isActive) revert SavingsVault__AccountNotActive();
+
+        // Transfer USDC from user to vault
+        usdc.safeTransferFrom(msg.sender, address(this), amount);
+
+        // Update user account
+        accounts[msg.sender].totalDeposited += amount;
+        accounts[msg.sender].currentBalance += amount;
+        totalValueLocked += amount;
+
+        emit Deposited(msg.sender, amount, accounts[msg.sender].currentBalance);
+    }
 }
