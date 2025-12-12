@@ -202,4 +202,46 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
         accounts[msg.sender].trustMode = newMode;
         emit TrustModeUpdated(msg.sender, newMode);
     }
+
+    // =============================================================
+    //                   AUTOMATED FUNCTIONS
+    // =============================================================
+
+    /**
+     * @notice Execute an auto-save (called by x402 executor or user in manual mode)
+     * @param user Address of user to save for
+     * @param amount Amount to save
+     * @dev Can be called by: (1) x402Executor if AUTO mode, (2) user themselves in MANUAL mode
+     */
+    function autoSave(address user, uint256 amount) external nonReentrant whenNotPaused {
+        UserAccount storage account = accounts[user];
+
+        if (!account.isActive) revert SavingsVault__AccountNotActive();
+        if (amount == 0 || amount > MAX_SAVE_AMOUNT) revert SavingsVault__AmountExceedsLimit();
+
+        // Authorization check
+        if (account.trustMode == TrustMode.AUTO) {
+            // Only x402 executor can trigger auto-saves in AUTO mode
+            if (msg.sender != x402Executor) revert SavingsVault__UnauthorizedCaller();
+        } else {
+            // In MANUAL mode, only the user can trigger (after approving in frontend)
+            if (msg.sender != user) revert SavingsVault__UnauthorizedCaller();
+        }
+
+        // Rate limiting: prevent saves more frequent than MIN_SAVE_INTERVAL
+        if (block.timestamp < account.lastSaveTimestamp + MIN_SAVE_INTERVAL) {
+            revert SavingsVault__SaveIntervalNotMet();
+        }
+
+        // Transfer USDC from user's wallet to vault
+        usdc.safeTransferFrom(user, address(this), amount);
+
+        // Update account
+        account.totalDeposited += amount;
+        account.currentBalance += amount;
+        account.lastSaveTimestamp = block.timestamp;
+        totalValueLocked += amount;
+
+        emit AutoSaveExecuted(user, amount, msg.sender);
+    }
 }
