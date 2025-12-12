@@ -268,4 +268,48 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
         if (!account.isActive) return false;
         return block.timestamp >= account.lastSaveTimestamp + MIN_SAVE_INTERVAL;
     }
+
+    // =============================================================
+    //                     ADMIN FUNCTIONS
+    // =============================================================
+
+    /**
+     * @notice Set the yield strategy contract address
+     * @param _yieldStrategy Address of VVSYieldStrategy contract
+     * @dev Only owner (deployer) can call. Used after deploying yield strategy.
+     */
+    function setYieldStrategy(address _yieldStrategy) external onlyOwner {
+        if (_yieldStrategy == address(0)) revert SavingsVault__ZeroAddress();
+        address oldStrategy = yieldStrategy;
+        yieldStrategy = _yieldStrategy;
+        emit YieldStrategyUpdated(oldStrategy, _yieldStrategy);
+    }
+
+    /**
+     * @notice Set the x402 executor contract address
+     * @param _x402Executor Address of x402Executor contract
+     * @dev Only owner can call. Used after deploying x402 executor.
+     */
+    function setX402Executor(address _x402Executor) external onlyOwner {
+        if (_x402Executor == address(0)) revert SavingsVault__ZeroAddress();
+        address oldExecutor = x402Executor;
+        x402Executor = _x402Executor;
+        emit X402ExecutorUpdated(oldExecutor, _x402Executor);
+    }
+
+    /**
+     * @notice Pause the contract (emergency stop)
+     * @dev Only owner can call
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @notice Unpause the contract
+     * @dev Only owner can call
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
 }
