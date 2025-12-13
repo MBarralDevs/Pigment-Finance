@@ -203,4 +203,61 @@ contract SavingsVaultTest is Test {
 
         vm.stopPrank();
     }
+
+    function testCannotAutoSaveInAutoModeAsUser() public {
+        vm.startPrank(alice);
+
+        vault.createAccount(100e6, 500e6, SavingsVault.TrustMode.AUTO);
+        usdc.approve(address(vault), 100e6);
+        vm.warp(block.timestamp + 1 days); // Advance time by 1 day to be sure to allow saving
+
+        // Alice tries to trigger save herself (should fail in AUTO mode)
+        vm.expectRevert(SavingsVault.SavingsVault__UnauthorizedCaller.selector);
+        vault.autoSave(alice, 100e6);
+
+        vm.stopPrank();
+    }
+
+    function testRateLimitingOnAutoSave() public {
+        vm.startPrank(alice);
+
+        vault.createAccount(100e6, 500e6, SavingsVault.TrustMode.MANUAL);
+        usdc.approve(address(vault), 200e6);
+        vm.warp(block.timestamp + 1 days); // Advance time by 1 day to be sure to allow saving
+
+        // First save
+        vault.autoSave(alice, 100e6);
+
+        // Try to save again immediately (should fail)
+        vm.expectRevert(SavingsVault.SavingsVault__SaveIntervalNotMet.selector);
+        vault.autoSave(alice, 100e6);
+
+        vm.stopPrank();
+
+        // Fast forward 1 day + 1 second
+        vm.warp(block.timestamp + 1 days + 1);
+
+        vm.startPrank(alice);
+
+        // Now it should work
+        vault.autoSave(alice, 100e6);
+
+        SavingsVault.UserAccount memory account = vault.getAccount(alice);
+        assertEq(account.currentBalance, 200e6);
+
+        vm.stopPrank();
+    }
+
+    function testCannotAutoSaveAboveMaxLimit() public {
+        vm.startPrank(alice);
+
+        vault.createAccount(100e6, 500e6, SavingsVault.TrustMode.MANUAL);
+        usdc.approve(address(vault), 20000e6);
+        vm.warp(block.timestamp + 1 days); // Advance time by 1 day to be sure to allow saving
+
+        vm.expectRevert(SavingsVault.SavingsVault__AmountExceedsLimit.selector);
+        vault.autoSave(alice, 15000e6); // Above 10k limit
+
+        vm.stopPrank();
+    }
 }
