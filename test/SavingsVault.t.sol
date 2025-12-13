@@ -98,4 +98,15 @@ contract SavingsVaultTest is Test {
 
         vm.stopPrank();
     }
+
+    function testCannotDepositWithoutAccount() public {
+        vm.startPrank(alice);
+
+        usdc.approve(address(vault), 1000e6);
+
+        vm.expectRevert(SavingsVault.SavingsVault__AccountNotActive.selector);
+        vault.deposit(1000e6);
+
+        vm.stopPrank();
+    }
 }
