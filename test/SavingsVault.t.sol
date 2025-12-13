@@ -29,4 +29,37 @@ contract SavingsVaultTest is Test {
         usdc.mint(alice, 10000e6); // 10k USDC
         usdc.mint(bob, 10000e6);
     }
+
+    // =============================================================
+    //                   ACCOUNT CREATION TESTS
+    // =============================================================
+
+    function testCreateAccount() public {
+        vm.startPrank(alice);
+
+        vault.createAccount(
+            100e6, // 100 USDC weekly goal
+            500e6, // 500 USDC safety buffer
+            SavingsVault.TrustMode.MANUAL
+        );
+        SavingsVault.UserAccount memory account = vault.getAccount(alice);
+
+        assertEq(account.weeklyGoal, 100e6);
+        assertEq(account.safetyBuffer, 500e6);
+        assertEq(account.isActive, true);
+        assertTrue(account.trustMode == SavingsVault.TrustMode.MANUAL);
+
+        vm.stopPrank();
+    }
+
+    function testCannotCreateDuplicateAccount() public {
+        vm.startPrank(alice);
+
+        vault.createAccount(100e6, 500e6, SavingsVault.TrustMode.MANUAL);
+
+        vm.expectRevert(SavingsVault.SavingsVault__AccountAlreadyExists.selector);
+        vault.createAccount(100e6, 500e6, SavingsVault.TrustMode.MANUAL);
+
+        vm.stopPrank();
+    }
 }
