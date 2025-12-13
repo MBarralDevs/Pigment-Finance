@@ -86,4 +86,16 @@ contract SavingsVaultTest is Test {
 
         vm.stopPrank();
     }
+
+    function testCannotDepositBelowMinimum() public {
+        vm.startPrank(alice);
+
+        vault.createAccount(100e6, 500e6, SavingsVault.TrustMode.MANUAL);
+        usdc.approve(address(vault), 1e6);
+
+        vm.expectRevert(SavingsVault.SavingsVault__InvalidAmount.selector);
+        vault.deposit(0.5e6); // 0.5 USDC (below 1 USDC minimum)
+
+        vm.stopPrank();
+    }
 }
