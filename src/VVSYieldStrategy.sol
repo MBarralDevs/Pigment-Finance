@@ -87,10 +87,27 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
     uint256 public slippageTolerance = 50; // 0.5%
 
     // =============================================================
+    //                          EVENTS
+    // =============================================================
+
+    event Deposited(address indexed user, uint256 usdcAmount, uint256 liquidityTokens);
+
+    // =============================================================
     //                          ERRORS
     // =============================================================
 
     error VVSYieldStrategy__ZeroAddress();
+    error VVSYieldStrategy__OnlyVault();
+    error VVSYieldStrategy__ZeroAmount();
+
+    // =============================================================
+    //                        MODIFIERS
+    // =============================================================
+
+    modifier onlyVault() {
+        if (msg.sender != savingsVault) revert VVSYieldStrategy__OnlyVault();
+        _;
+    }
 
     // =============================================================
     //                        CONSTRUCTOR
@@ -116,5 +133,41 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
         // Approve router to spend tokens (set to max for gas efficiency)
         usdc.approve(_vvsRouter, type(uint256).max);
         usdt.approve(_vvsRouter, type(uint256).max);
+    }
+
+    // =============================================================
+    //                     VAULT FUNCTIONS
+    // =============================================================
+
+    /**
+     * @notice Deposit USDC into VVS liquidity pool to earn yield
+     * @param user Address of the user
+     * @param amount Amount of USDC to deposit
+     * @return liquidityTokens Amount of LP tokens received
+     * @dev Only callable by SavingsVault
+     */
+    function deposit(address user, uint256 amount) external onlyVault nonReentrant returns (uint256 liquidityTokens) {
+        if (amount == 0) revert VVSYieldStrategy__ZeroAmount();
+
+        // Transfer USDC from vault to this contract
+        usdc.safeTransferFrom(msg.sender, address(this), amount);
+
+        // Split USDC 50/50 to USDC/USDT
+        // We need to swap half of USDC to USDT first
+        uint256 halfAmount = amount / 2;
+        uint256 usdtAmount = _swapUSDCToUSDT(halfAmount);
+
+        // Add liquidity to VVS (USDC-USDT pool)
+        uint256 usdcUsed;
+        uint256 usdtUsed;
+        (usdcUsed, usdtUsed, liquidityTokens) = _addLiquidity(halfAmount, usdtAmount);
+
+        // Track LP tokens for user
+        userLiquidityTokens[user] += liquidityTokens;
+        totalLiquidityTokens += liquidityTokens;
+
+        emit Deposited(user, amount, liquidityTokens);
+
+        return liquidityTokens;
     }
 }
