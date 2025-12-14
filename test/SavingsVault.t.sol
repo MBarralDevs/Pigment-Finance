@@ -5,6 +5,7 @@ import {Test, console2} from "forge-std/Test.sol";
 import {SavingsVault} from "../src/SavingsVault.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {MockUSDC} from "./mocks/MockUSDC.t.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 contract SavingsVaultTest is Test {
     SavingsVault public vault;
@@ -303,7 +304,7 @@ contract SavingsVaultTest is Test {
         vault.createAccount(100e6, 500e6, SavingsVault.TrustMode.MANUAL);
         usdc.approve(address(vault), 1000e6);
 
-        vm.expectRevert(SavingsVault.SavingsVault__EnforcedPause.selector);
+        vm.expectRevert(Pausable.EnforcedPause.selector);
         vault.deposit(1000e6);
 
         vm.stopPrank();
