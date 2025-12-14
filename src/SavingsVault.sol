@@ -229,7 +229,8 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
         }
 
         // Rate limiting: prevent saves more frequent than MIN_SAVE_INTERVAL
-        if (block.timestamp < account.lastSaveTimestamp + MIN_SAVE_INTERVAL) {
+        // Skip check if this is the first save (lastSaveTimestamp == 0)
+        if (account.lastSaveTimestamp != 0 && block.timestamp < account.lastSaveTimestamp + MIN_SAVE_INTERVAL) {
             revert SavingsVault__SaveIntervalNotMet();
         }
 

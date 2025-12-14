@@ -290,4 +290,33 @@ contract SavingsVaultTest is Test {
 
         vm.stopPrank();
     }
+
+    // =============================================================
+    //                   ADMIN TESTS
+    // =============================================================
+
+    function testSetYieldStrategy() public {
+        address newStrategy = address(0x999);
+        vault.setYieldStrategy(newStrategy);
+        assertEq(vault.yieldStrategy(), newStrategy);
+    }
+
+    function testPauseAndUnpause() public {
+        vault.pause();
+
+        vm.startPrank(alice);
+        vault.createAccount(100e6, 500e6, SavingsVault.TrustMode.MANUAL);
+        usdc.approve(address(vault), 1000e6);
+
+        vm.expectRevert(SavingsVault.SavingsVault__EnforcedPause.selector);
+        vault.deposit(1000e6);
+
+        vm.stopPrank();
+
+        vault.unpause();
+
+        vm.startPrank(alice);
+        vault.deposit(1000e6); // Should work now
+        vm.stopPrank();
+    }
 }
