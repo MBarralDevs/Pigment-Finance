@@ -91,6 +91,7 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
     // =============================================================
 
     event Deposited(address indexed user, uint256 usdcAmount, uint256 liquidityTokens);
+    event Withdrawn(address indexed user, uint256 liquidityTokens, uint256 usdcAmount);
 
     // =============================================================
     //                          ERRORS
@@ -99,6 +100,7 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
     error VVSYieldStrategy__ZeroAddress();
     error VVSYieldStrategy__OnlyVault();
     error VVSYieldStrategy__ZeroAmount();
+    error VVSYieldStrategy__InsufficientLiquidity();
 
     // =============================================================
     //                        MODIFIERS
@@ -169,5 +171,44 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
         emit Deposited(user, amount, liquidityTokens);
 
         return liquidityTokens;
+    }
+
+    /**
+     * @notice Withdraw USDC from VVS liquidity pool
+     * @param user Address of the user
+     * @param liquidityTokens Amount of LP tokens to withdraw
+     * @return usdcAmount Amount of USDC returned to vault
+     * @dev Only callable by SavingsVault
+     */
+    function withdraw(address user, uint256 liquidityTokens)
+        external
+        onlyVault
+        nonReentrant
+        returns (uint256 usdcAmount)
+    {
+        if (liquidityTokens == 0) revert VVSYieldStrategy__ZeroAmount();
+        if (userLiquidityTokens[user] < liquidityTokens) {
+            revert VVSYieldStrategy__InsufficientLiquidity();
+        }
+
+        // Remove liquidity from VVS
+        (uint256 usdcReceived, uint256 usdtReceived) = _removeLiquidity(liquidityTokens);
+
+        // Convert all USDT back to USDC
+        uint256 usdcFromSwap = _swapUSDTToUSDC(usdtReceived);
+
+        // Total USDC to return
+        usdcAmount = usdcReceived + usdcFromSwap;
+
+        // Update tracking
+        userLiquidityTokens[user] -= liquidityTokens;
+        totalLiquidityTokens -= liquidityTokens;
+
+        // Transfer USDC back to vault
+        usdc.safeTransfer(msg.sender, usdcAmount);
+
+        emit Withdrawn(user, liquidityTokens, usdcAmount);
+
+        return usdcAmount;
     }
 }
