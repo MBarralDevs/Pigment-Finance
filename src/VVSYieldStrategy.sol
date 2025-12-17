@@ -92,15 +92,19 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
 
     event Deposited(address indexed user, uint256 usdcAmount, uint256 liquidityTokens);
     event Withdrawn(address indexed user, uint256 liquidityTokens, uint256 usdcAmount);
+    event YieldHarvested(address indexed user, uint256 yieldAmount);
+    event SavingsVaultUpdated(address indexed oldVault, address indexed newVault);
+    event SlippageToleranceUpdated(uint256 oldTolerance, uint256 newTolerance);
 
     // =============================================================
     //                          ERRORS
     // =============================================================
 
     error VVSYieldStrategy__ZeroAddress();
-    error VVSYieldStrategy__OnlyVault();
     error VVSYieldStrategy__ZeroAmount();
+    error VVSYieldStrategy__OnlyVault();
     error VVSYieldStrategy__InsufficientLiquidity();
+    error VVSYieldStrategy__SlippageTooHigh();
 
     // =============================================================
     //                        MODIFIERS
@@ -352,5 +356,21 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
             return currentValue - initialDeposit;
         }
         return 0;
+    }
+
+    // =============================================================
+    //                     ADMIN FUNCTIONS
+    // =============================================================
+
+    /**
+     * @notice Set the SavingsVault address
+     * @param _savingsVault Address of SavingsVault contract
+     * @dev Only owner can call. Used after deploying vault.
+     */
+    function setSavingsVault(address _savingsVault) external onlyOwner {
+        if (_savingsVault == address(0)) revert VVSYieldStrategy__ZeroAddress();
+        address oldVault = savingsVault;
+        savingsVault = _savingsVault;
+        emit SavingsVaultUpdated(oldVault, _savingsVault);
     }
 }
