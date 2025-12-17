@@ -373,4 +373,16 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
         savingsVault = _savingsVault;
         emit SavingsVaultUpdated(oldVault, _savingsVault);
     }
+
+    /**
+     * @notice Update slippage tolerance
+     * @param _slippageTolerance New slippage in basis points
+     * @dev 50 = 0.5%, 100 = 1%
+     */
+    function setSlippageTolerance(uint256 _slippageTolerance) external onlyOwner {
+        if (_slippageTolerance > 500) revert VVSYieldStrategy__SlippageTooHigh(); // Max 5%
+        uint256 oldTolerance = slippageTolerance;
+        slippageTolerance = _slippageTolerance;
+        emit SlippageToleranceUpdated(oldTolerance, _slippageTolerance);
+    }
 }
