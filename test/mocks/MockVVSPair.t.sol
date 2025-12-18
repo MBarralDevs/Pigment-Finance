@@ -13,16 +13,22 @@ contract MockVVSPair is ERC20 {
     }
 
     function getReserves() external view returns (uint112, uint112, uint32) {
-        // Mock reserves (1M each token)
-        return (1000000e6, 1000000e6, uint32(block.timestamp));
+        // Return reserves equal to total LP supply
+        // This creates a 1:1 ratio: 1 LP token = 1 USDC value
+        uint256 supply = totalSupply();
+        uint112 reserve = uint112(supply > 0 ? supply / 2 : 1000e6);
+
+        return (reserve, reserve, uint32(block.timestamp));
     }
 
-    // Mint LP tokens (for testing)
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
     }
 
-    // Override decimals to match USDC (6 decimals)
+    function burn(address from, uint256 amount) external {
+        _burn(from, amount);
+    }
+
     function decimals() public pure override returns (uint8) {
         return 6;
     }

@@ -124,4 +124,59 @@ contract VVSYieldStrategyTest is Test {
 
         vm.stopPrank();
     }
+
+    // =============================================================
+    //                   VIEW TESTS
+    // =============================================================
+
+    function testGetUserValue() public {
+        vm.startPrank(vault);
+
+        usdc.approve(address(strategy), 1000e6);
+        uint256 lpTokens = strategy.deposit(alice, 1000e6);
+
+        uint256 value = strategy.getUserValue(alice);
+
+        console2.log("Deposited:", 1000e6);
+        console2.log("LP tokens received:", lpTokens);
+        console2.log("Calculated value:", value);
+
+        // Value should be approximately equal to deposit
+        // Allow for rounding and small slippage (within 5%)
+        uint256 minExpected = (1000e6 * 95) / 100; // 950 USDC
+        uint256 maxExpected = (1000e6 * 105) / 100; // 1050 USDC
+
+        assertGe(value, minExpected, "Value too low");
+        assertLe(value, maxExpected, "Value too high");
+
+        vm.stopPrank();
+    }
+
+    function testGetUserValueWithYieldGrowth() public {
+        vm.startPrank(vault);
+
+        // Alice deposits 1000 USDC
+        usdc.approve(address(strategy), 1000e6);
+        strategy.deposit(alice, 1000e6);
+
+        uint256 initialValue = strategy.getUserValue(alice);
+        console2.log("Initial value:", initialValue);
+
+        vm.stopPrank();
+
+        // Simulate yield growth by having someone else add liquidity
+        // In a real pool, trading fees would grow reserves
+        vm.startPrank(vault);
+        usdc.approve(address(strategy), 1000e6);
+        strategy.deposit(address(0x3), 1000e6); // Bob deposits
+        vm.stopPrank();
+
+        // Alice's value should stay roughly the same
+        // (In real VVS, it would grow from fees, but our mock is simplified)
+        uint256 laterValue = strategy.getUserValue(alice);
+        console2.log("Later value:", laterValue);
+
+        // For simplified mock, value should be similar
+        assertApproxEqRel(laterValue, initialValue, 0.1e18); // Within 10%
+    }
 }
