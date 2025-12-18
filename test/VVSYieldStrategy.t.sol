@@ -78,4 +78,30 @@ contract VVSYieldStrategyTest is Test {
 
         vm.stopPrank();
     }
+
+    // =============================================================
+    //                   WITHDRAWAL TESTS
+    // =============================================================
+
+    function testWithdraw() public {
+        vm.startPrank(vault);
+
+        // Setup: deposit first
+        usdc.approve(address(strategy), 1000e6);
+        uint256 lpTokens = strategy.deposit(alice, 1000e6);
+
+        uint256 vaultBalanceBefore = usdc.balanceOf(vault);
+
+        // Withdraw
+        uint256 usdcReceived = strategy.withdraw(alice, lpTokens);
+
+        uint256 vaultBalanceAfter = usdc.balanceOf(vault);
+
+        // Check USDC was returned (should be close to 1000e6, minus fees)
+        assertGt(usdcReceived, 900e6); // Allow for some slippage
+        assertEq(vaultBalanceAfter - vaultBalanceBefore, usdcReceived);
+        assertEq(strategy.userLiquidityTokens(alice), 0);
+
+        vm.stopPrank();
+    }
 }
