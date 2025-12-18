@@ -23,9 +23,14 @@ contract VVSYieldStrategyTest is Test {
         usdc = new MockUSDC();
         usdt = new MockUSDC(); // Same implementation, different token
 
-        // Deploy mock VVS contracts
-        vvsRouter = new MockVVSRouter(address(usdc), address(usdt));
+        // Deploy mock VVS pair first
         usdcUsdtPair = new MockVVSPair(address(usdc), address(usdt));
+
+        // Deploy mock VVS router
+        vvsRouter = new MockVVSRouter(address(usdc), address(usdt));
+
+        // Connect pair to router
+        vvsRouter.setPair(address(usdcUsdtPair));
 
         // Deploy strategy
         strategy = new VVSYieldStrategy(address(vvsRouter), address(usdc), address(usdt), address(usdcUsdtPair));
@@ -38,6 +43,9 @@ contract VVSYieldStrategyTest is Test {
 
         // Give router some USDT for swaps
         usdt.mint(address(vvsRouter), 100000e6);
+
+        // Give router some USDC for withdrawals (removeLiquidity needs to return USDC)
+        usdc.mint(address(vvsRouter), 100000e6);
     }
 
     // =============================================================
