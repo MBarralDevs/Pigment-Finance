@@ -245,4 +245,24 @@ contract VVSYieldStrategyTest is Test {
 
         vm.stopPrank();
     }
+
+    // =============================================================
+    //                   ADMIN TESTS
+    // =============================================================
+
+    function testSetSavingsVault() public {
+        address newVault = address(0x999);
+        strategy.setSavingsVault(newVault);
+        assertEq(strategy.savingsVault(), newVault);
+    }
+
+    function testCannotSetSavingsVaultToZero() public {
+        vm.expectRevert(VVSYieldStrategy.VVSYieldStrategy__ZeroAddress.selector);
+        strategy.setSavingsVault(address(0));
+    }
+
+    function testSetSlippageTolerance() public {
+        strategy.setSlippageTolerance(100); // 1%
+        assertEq(strategy.slippageTolerance(), 100);
+    }
 }
