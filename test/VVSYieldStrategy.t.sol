@@ -87,6 +87,22 @@ contract VVSYieldStrategyTest is Test {
         vm.stopPrank();
     }
 
+    function testMultipleDeposits() public {
+        vm.startPrank(vault);
+
+        usdc.approve(address(strategy), 3000e6);
+
+        // First deposit
+        uint256 lpTokens1 = strategy.deposit(alice, 1000e6);
+        assertEq(strategy.userLiquidityTokens(alice), lpTokens1);
+
+        // Second deposit
+        uint256 lpTokens2 = strategy.deposit(alice, 2000e6);
+        assertEq(strategy.userLiquidityTokens(alice), lpTokens1 + lpTokens2);
+
+        vm.stopPrank();
+    }
+
     // =============================================================
     //                   WITHDRAWAL TESTS
     // =============================================================
