@@ -125,6 +125,36 @@ contract VVSYieldStrategyTest is Test {
         vm.stopPrank();
     }
 
+    function testCannotWithdrawZero() public {
+        vm.startPrank(vault);
+
+        vm.expectRevert(VVSYieldStrategy.VVSYieldStrategy__ZeroAmount.selector);
+        strategy.withdraw(alice, 0);
+
+        vm.stopPrank();
+    }
+
+    function testPartialWithdraw() public {
+        vm.startPrank(vault);
+
+        // Deposit
+        usdc.approve(address(strategy), 1000e6);
+        uint256 lpTokens = strategy.deposit(alice, 1000e6);
+
+        // Withdraw half
+        uint256 halfLpTokens = lpTokens / 2;
+        uint256 usdcReceived = strategy.withdraw(alice, halfLpTokens);
+
+        // Check remaining LP tokens
+        assertEq(strategy.userLiquidityTokens(alice), lpTokens - halfLpTokens);
+
+        // Should have received roughly half the USDC
+        assertGe(usdcReceived, 450e6);
+        assertLe(usdcReceived, 550e6);
+
+        vm.stopPrank();
+    }
+
     // =============================================================
     //                   VIEW TESTS
     // =============================================================
