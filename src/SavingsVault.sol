@@ -7,10 +7,18 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
+// Interface for VVSYieldStrategy
+interface IVVSYieldStrategy {
+    function deposit(address user, uint256 amount) external returns (uint256 liquidityTokens);
+    function withdraw(address user, uint256 liquidityTokens) external returns (uint256 usdcAmount);
+    function getUserValue(address user) external view returns (uint256 usdcValue);
+    function userLiquidityTokens(address user) external view returns (uint256);
+}
+
 /**
  * @title SavingsVault
  * @notice Core vault contract that holds user deposits and manages savings goals
- * @dev Users deposit USDC, set goals, and funds are later routed to yield strategies
+ * @dev Users deposit USDC, set goals, and funds are routed to yield strategies
  */
 contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
     using SafeERC20 for IERC20;
@@ -41,15 +49,15 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
     //                    IMMUTABLE VARIABLES
     // =============================================================
 
-    /// @notice USDC token (we'll use Cronos testnet USDC)
+    /// @notice USDC token
     IERC20 public immutable i_USDC;
 
     // =============================================================
     //                       STATE VARIABLES
     // =============================================================
 
-    /// @notice Yield strategy contract (will be set after deployment)
-    address public s_yieldStrategy;
+    /// @notice Yield strategy contract
+    IVVSYieldStrategy public s_yieldStrategy;
 
     /// @notice x402 executor contract (authorized to trigger auto-saves)
     address public s_x402Executor;
@@ -57,7 +65,7 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
     /// @notice Mapping of user address to their account
     mapping(address => UserAccount) public s_accounts;
 
-    /// @notice Total value locked in the vault (excludes funds in yield strategy)
+    /// @notice Total value locked in vault only (excludes funds in yield strategy)
     uint256 public s_totalValueLocked;
 
     /// @notice Minimum deposit amount (prevents dust attacks)
@@ -74,19 +82,14 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
     // =============================================================
 
     event AccountCreated(address indexed user, uint256 weeklyGoal, uint256 safetyBuffer, TrustMode trustMode);
-
     event Deposited(address indexed user, uint256 amount, uint256 newBalance);
-
+    event DepositedToYield(address indexed user, uint256 amount, uint256 liquidityTokens);
     event Withdrawn(address indexed user, uint256 amount, uint256 newBalance);
-
+    event WithdrawnFromYield(address indexed user, uint256 liquidityTokens, uint256 usdcAmount);
     event AutoSaveExecuted(address indexed user, uint256 amount, address triggeredBy);
-
     event GoalUpdated(address indexed user, uint256 newWeeklyGoal);
-
     event TrustModeUpdated(address indexed user, TrustMode newMode);
-
     event YieldStrategyUpdated(address indexed oldStrategy, address indexed newStrategy);
-
     event X402ExecutorUpdated(address indexed oldExecutor, address indexed newExecutor);
 
     // =============================================================
@@ -102,6 +105,7 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
     error SavingsVault__ZeroAddress();
     error SavingsVault__GoalNotPositive();
     error SavingsVault__AccountAlreadyExists();
+    error SavingsVault__YieldStrategyNotSet();
 
     // =============================================================
     //                        CONSTRUCTOR
@@ -143,7 +147,7 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
     }
 
     /**
-     * @notice Deposit USDC into the vault
+     * @notice Deposit USDC into the vault and route to yield strategy
      * @param amount Amount of USDC to deposit (6 decimals)
      */
     function deposit(uint256 amount) external nonReentrant whenNotPaused {
@@ -159,17 +163,31 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
         s_totalValueLocked += amount;
 
         emit Deposited(msg.sender, amount, s_accounts[msg.sender].currentBalance);
+
+        // Route to yield strategy if set
+        if (address(s_yieldStrategy) != address(0)) {
+            _depositToYield(msg.sender, amount);
+        }
     }
 
     /**
-     * @notice Withdraw USDC from the vault
+     * @notice Withdraw USDC from the vault (and yield strategy if needed)
      * @param amount Amount of USDC to withdraw (6 decimals)
-     * @dev For hackathon v1, we withdraw only from vault (not yield strategy yet)
      */
     function withdraw(uint256 amount) external nonReentrant whenNotPaused {
         if (amount == 0) revert SavingsVault__InvalidAmount();
         if (!s_accounts[msg.sender].isActive) revert SavingsVault__AccountNotActive();
         if (s_accounts[msg.sender].currentBalance < amount) revert SavingsVault__InsufficientBalance();
+
+        // Check vault balance first
+        uint256 vaultBalance = i_USDC.balanceOf(address(this));
+        uint256 amountFromYield = 0;
+
+        // If vault doesn't have enough, withdraw from yield strategy
+        if (vaultBalance < amount && address(s_yieldStrategy) != address(0)) {
+            uint256 needed = amount - vaultBalance;
+            amountFromYield = _withdrawFromYield(msg.sender, needed);
+        }
 
         // Update user account
         s_accounts[msg.sender].totalWithdrawn += amount;
@@ -223,15 +241,12 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
 
         // Authorization check
         if (account.trustMode == TrustMode.AUTO) {
-            // Only x402 executor can trigger auto-saves in AUTO mode
             if (msg.sender != s_x402Executor) revert SavingsVault__UnauthorizedCaller();
         } else {
-            // In MANUAL mode, only the user can trigger (after approving in frontend)
             if (msg.sender != user) revert SavingsVault__UnauthorizedCaller();
         }
 
-        // Rate limiting: prevent saves more frequent than MIN_SAVE_INTERVAL
-        // Skip check if this is the first save (lastSaveTimestamp == 0)
+        // Rate limiting
         if (account.lastSaveTimestamp != 0 && block.timestamp < account.lastSaveTimestamp + MIN_SAVE_INTERVAL) {
             revert SavingsVault__SaveIntervalNotMet();
         }
@@ -246,6 +261,62 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
         s_totalValueLocked += amount;
 
         emit AutoSaveExecuted(user, amount, msg.sender);
+
+        // Route to yield strategy if set
+        if (address(s_yieldStrategy) != address(0)) {
+            _depositToYield(user, amount);
+        }
+    }
+
+    // =============================================================
+    //                   INTERNAL FUNCTIONS
+    // =============================================================
+
+    /**
+     * @notice Deposit funds to yield strategy
+     * @param user User address
+     * @param amount USDC amount to deposit
+     */
+    function _depositToYield(address user, uint256 amount) internal {
+        // Approve yield strategy to spend USDC
+        i_USDC.approve(address(s_yieldStrategy), amount);
+
+        // Deposit to yield strategy
+        uint256 liquidityTokens = s_yieldStrategy.deposit(user, amount);
+
+        emit DepositedToYield(user, amount, liquidityTokens);
+    }
+
+    /**
+     * @notice Withdraw funds from yield strategy
+     * @param user User address
+     * @param usdcNeeded USDC amount needed
+     * @return usdcReceived Actual USDC received
+     */
+    function _withdrawFromYield(address user, uint256 usdcNeeded) internal returns (uint256 usdcReceived) {
+        // Get user's LP tokens in strategy
+        uint256 userLpTokens = s_yieldStrategy.userLiquidityTokens(user);
+        if (userLpTokens == 0) return 0;
+
+        // Get user's total value in strategy
+        uint256 userValueInStrategy = s_yieldStrategy.getUserValue(user);
+
+        // Calculate how many LP tokens to withdraw
+        uint256 lpToWithdraw;
+        if (usdcNeeded >= userValueInStrategy) {
+            // Withdraw everything
+            lpToWithdraw = userLpTokens;
+        } else {
+            // Withdraw proportionally
+            lpToWithdraw = (userLpTokens * usdcNeeded) / userValueInStrategy;
+        }
+
+        // Withdraw from strategy
+        usdcReceived = s_yieldStrategy.withdraw(user, lpToWithdraw);
+
+        emit WithdrawnFromYield(user, lpToWithdraw, usdcReceived);
+
+        return usdcReceived;
     }
 
     // =============================================================
@@ -259,6 +330,25 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
      */
     function getAccount(address user) external view returns (UserAccount memory) {
         return s_accounts[user];
+    }
+
+    /**
+     * @notice Get user's total balance including yield
+     * @param user Address of user
+     * @return Total balance (vault + yield strategy)
+     */
+    function getUserTotalBalance(address user) external view returns (uint256) {
+        uint256 accountBalance = s_accounts[user].currentBalance;
+
+        // Add value from yield strategy if it exists
+        if (address(s_yieldStrategy) != address(0)) {
+            uint256 yieldValue = s_yieldStrategy.getUserValue(user);
+            // Account balance already includes deposited amount, so we just return the yield value
+            // which represents current worth in the strategy
+            return yieldValue;
+        }
+
+        return accountBalance;
     }
 
     /**
@@ -285,7 +375,7 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
      * @return Yield strategy contract address
      */
     function yieldStrategy() external view returns (address) {
-        return s_yieldStrategy;
+        return address(s_yieldStrategy);
     }
 
     /**
@@ -307,8 +397,8 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
      */
     function setYieldStrategy(address _yieldStrategy) external onlyOwner {
         if (_yieldStrategy == address(0)) revert SavingsVault__ZeroAddress();
-        address oldStrategy = s_yieldStrategy;
-        s_yieldStrategy = _yieldStrategy;
+        address oldStrategy = address(s_yieldStrategy);
+        s_yieldStrategy = IVVSYieldStrategy(_yieldStrategy);
         emit YieldStrategyUpdated(oldStrategy, _yieldStrategy);
     }
 
