@@ -137,7 +137,7 @@ contract VVSYieldStrategyTest is Test {
 
         uint256 value = strategy.getUserValue(alice);
 
-        console2.log("Deposited:", 1000e6);
+        //console2.log("Deposited:", 1000e6);
         console2.log("LP tokens received:", lpTokens);
         console2.log("Calculated value:", value);
 

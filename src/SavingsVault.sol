@@ -38,23 +38,27 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
     }
 
     // =============================================================
-    //                       STATE VARIABLES
+    //                    IMMUTABLE VARIABLES
     // =============================================================
 
     /// @notice USDC token (we'll use Cronos testnet USDC)
-    IERC20 public immutable usdc;
+    IERC20 public immutable i_USDC;
+
+    // =============================================================
+    //                       STATE VARIABLES
+    // =============================================================
 
     /// @notice Yield strategy contract (will be set after deployment)
-    address public yieldStrategy;
+    address public s_yieldStrategy;
 
     /// @notice x402 executor contract (authorized to trigger auto-saves)
-    address public x402Executor;
+    address public s_x402Executor;
 
     /// @notice Mapping of user address to their account
-    mapping(address => UserAccount) public accounts;
+    mapping(address => UserAccount) public s_accounts;
 
     /// @notice Total value locked in the vault (excludes funds in yield strategy)
-    uint256 public totalValueLocked;
+    uint256 public s_totalValueLocked;
 
     /// @notice Minimum deposit amount (prevents dust attacks)
     uint256 public constant MIN_DEPOSIT = 1e6; // 1 USDC
@@ -98,7 +102,6 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
     error SavingsVault__ZeroAddress();
     error SavingsVault__GoalNotPositive();
     error SavingsVault__AccountAlreadyExists();
-    error SavingsVault__EnforcedPause();
 
     // =============================================================
     //                        CONSTRUCTOR
@@ -108,7 +111,7 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
     /// @param _usdc Address of USDC token on Cronos
     constructor(address _usdc) Ownable(msg.sender) {
         if (_usdc == address(0)) revert SavingsVault__ZeroAddress();
-        usdc = IERC20(_usdc);
+        i_USDC = IERC20(_usdc);
     }
 
     // =============================================================
@@ -121,12 +124,11 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
      * @param safetyBuffer Minimum balance to keep in wallet (6 decimals)
      * @param trustMode Whether AI needs manual approval or can auto-execute
      */
-
     function createAccount(uint256 weeklyGoal, uint256 safetyBuffer, TrustMode trustMode) external {
-        if (accounts[msg.sender].isActive) revert SavingsVault__AccountAlreadyExists();
-        if (weeklyGoal <= 0) revert SavingsVault__GoalNotPositive();
+        if (s_accounts[msg.sender].isActive) revert SavingsVault__AccountAlreadyExists();
+        if (weeklyGoal == 0) revert SavingsVault__GoalNotPositive();
 
-        accounts[msg.sender] = UserAccount({
+        s_accounts[msg.sender] = UserAccount({
             totalDeposited: 0,
             totalWithdrawn: 0,
             currentBalance: 0,
@@ -146,17 +148,17 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
      */
     function deposit(uint256 amount) external nonReentrant whenNotPaused {
         if (amount < MIN_DEPOSIT) revert SavingsVault__InvalidAmount();
-        if (!accounts[msg.sender].isActive) revert SavingsVault__AccountNotActive();
+        if (!s_accounts[msg.sender].isActive) revert SavingsVault__AccountNotActive();
 
         // Transfer USDC from user to vault
-        usdc.safeTransferFrom(msg.sender, address(this), amount);
+        i_USDC.safeTransferFrom(msg.sender, address(this), amount);
 
         // Update user account
-        accounts[msg.sender].totalDeposited += amount;
-        accounts[msg.sender].currentBalance += amount;
-        totalValueLocked += amount;
+        s_accounts[msg.sender].totalDeposited += amount;
+        s_accounts[msg.sender].currentBalance += amount;
+        s_totalValueLocked += amount;
 
-        emit Deposited(msg.sender, amount, accounts[msg.sender].currentBalance);
+        emit Deposited(msg.sender, amount, s_accounts[msg.sender].currentBalance);
     }
 
     /**
@@ -166,18 +168,18 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
      */
     function withdraw(uint256 amount) external nonReentrant whenNotPaused {
         if (amount == 0) revert SavingsVault__InvalidAmount();
-        if (!accounts[msg.sender].isActive) revert SavingsVault__AccountNotActive();
-        if (accounts[msg.sender].currentBalance < amount) revert SavingsVault__InsufficientBalance();
+        if (!s_accounts[msg.sender].isActive) revert SavingsVault__AccountNotActive();
+        if (s_accounts[msg.sender].currentBalance < amount) revert SavingsVault__InsufficientBalance();
 
         // Update user account
-        accounts[msg.sender].totalWithdrawn += amount;
-        accounts[msg.sender].currentBalance -= amount;
-        totalValueLocked -= amount;
+        s_accounts[msg.sender].totalWithdrawn += amount;
+        s_accounts[msg.sender].currentBalance -= amount;
+        s_totalValueLocked -= amount;
 
         // Transfer USDC to user
-        usdc.safeTransfer(msg.sender, amount);
+        i_USDC.safeTransfer(msg.sender, amount);
 
-        emit Withdrawn(msg.sender, amount, accounts[msg.sender].currentBalance);
+        emit Withdrawn(msg.sender, amount, s_accounts[msg.sender].currentBalance);
     }
 
     /**
@@ -185,10 +187,10 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
      * @param newWeeklyGoal New target amount per week
      */
     function updateGoal(uint256 newWeeklyGoal) external {
-        if (!accounts[msg.sender].isActive) revert SavingsVault__AccountNotActive();
-        if (newWeeklyGoal <= 0) revert SavingsVault__GoalNotPositive();
+        if (!s_accounts[msg.sender].isActive) revert SavingsVault__AccountNotActive();
+        if (newWeeklyGoal == 0) revert SavingsVault__GoalNotPositive();
 
-        accounts[msg.sender].weeklyGoal = newWeeklyGoal;
+        s_accounts[msg.sender].weeklyGoal = newWeeklyGoal;
         emit GoalUpdated(msg.sender, newWeeklyGoal);
     }
 
@@ -197,9 +199,9 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
      * @param newMode New trust mode
      */
     function updateTrustMode(TrustMode newMode) external {
-        if (!accounts[msg.sender].isActive) revert SavingsVault__AccountNotActive();
+        if (!s_accounts[msg.sender].isActive) revert SavingsVault__AccountNotActive();
 
-        accounts[msg.sender].trustMode = newMode;
+        s_accounts[msg.sender].trustMode = newMode;
         emit TrustModeUpdated(msg.sender, newMode);
     }
 
@@ -214,7 +216,7 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
      * @dev Can be called by: (1) x402Executor if AUTO mode, (2) user themselves in MANUAL mode
      */
     function autoSave(address user, uint256 amount) external nonReentrant whenNotPaused {
-        UserAccount storage account = accounts[user];
+        UserAccount storage account = s_accounts[user];
 
         if (!account.isActive) revert SavingsVault__AccountNotActive();
         if (amount == 0 || amount > MAX_SAVE_AMOUNT) revert SavingsVault__AmountExceedsLimit();
@@ -222,7 +224,7 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
         // Authorization check
         if (account.trustMode == TrustMode.AUTO) {
             // Only x402 executor can trigger auto-saves in AUTO mode
-            if (msg.sender != x402Executor) revert SavingsVault__UnauthorizedCaller();
+            if (msg.sender != s_x402Executor) revert SavingsVault__UnauthorizedCaller();
         } else {
             // In MANUAL mode, only the user can trigger (after approving in frontend)
             if (msg.sender != user) revert SavingsVault__UnauthorizedCaller();
@@ -235,13 +237,13 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
         }
 
         // Transfer USDC from user's wallet to vault
-        usdc.safeTransferFrom(user, address(this), amount);
+        i_USDC.safeTransferFrom(user, address(this), amount);
 
         // Update account
         account.totalDeposited += amount;
         account.currentBalance += amount;
         account.lastSaveTimestamp = block.timestamp;
-        totalValueLocked += amount;
+        s_totalValueLocked += amount;
 
         emit AutoSaveExecuted(user, amount, msg.sender);
     }
@@ -256,7 +258,7 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
      * @return User's account struct
      */
     function getAccount(address user) external view returns (UserAccount memory) {
-        return accounts[user];
+        return s_accounts[user];
     }
 
     /**
@@ -265,9 +267,33 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
      * @return bool Whether save is allowed
      */
     function canAutoSave(address user) external view returns (bool) {
-        UserAccount memory account = accounts[user];
+        UserAccount memory account = s_accounts[user];
         if (!account.isActive) return false;
         return block.timestamp >= account.lastSaveTimestamp + MIN_SAVE_INTERVAL;
+    }
+
+    /**
+     * @notice Get total value locked
+     * @return Total USDC in vault
+     */
+    function totalValueLocked() external view returns (uint256) {
+        return s_totalValueLocked;
+    }
+
+    /**
+     * @notice Get yield strategy address
+     * @return Yield strategy contract address
+     */
+    function yieldStrategy() external view returns (address) {
+        return s_yieldStrategy;
+    }
+
+    /**
+     * @notice Get x402 executor address
+     * @return x402 executor contract address
+     */
+    function x402Executor() external view returns (address) {
+        return s_x402Executor;
     }
 
     // =============================================================
@@ -281,8 +307,8 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
      */
     function setYieldStrategy(address _yieldStrategy) external onlyOwner {
         if (_yieldStrategy == address(0)) revert SavingsVault__ZeroAddress();
-        address oldStrategy = yieldStrategy;
-        yieldStrategy = _yieldStrategy;
+        address oldStrategy = s_yieldStrategy;
+        s_yieldStrategy = _yieldStrategy;
         emit YieldStrategyUpdated(oldStrategy, _yieldStrategy);
     }
 
@@ -293,8 +319,8 @@ contract SavingsVault is ReentrancyGuard, Pausable, Ownable {
      */
     function setX402Executor(address _x402Executor) external onlyOwner {
         if (_x402Executor == address(0)) revert SavingsVault__ZeroAddress();
-        address oldExecutor = x402Executor;
-        x402Executor = _x402Executor;
+        address oldExecutor = s_x402Executor;
+        s_x402Executor = _x402Executor;
         emit X402ExecutorUpdated(oldExecutor, _x402Executor);
     }
 

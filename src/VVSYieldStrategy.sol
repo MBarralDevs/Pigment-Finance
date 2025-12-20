@@ -59,32 +59,36 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
 
     // =============================================================
-    //                       STATE VARIABLES
+    //                    IMMUTABLE VARIABLES
     // =============================================================
 
     /// @notice VVS Router contract
-    IVVSRouter public immutable vvsRouter;
+    IVVSRouter public immutable i_VVS_ROUTER;
 
     /// @notice USDC token
-    IERC20 public immutable usdc;
+    IERC20 public immutable i_USDC;
 
     /// @notice USDT token (pair with USDC)
-    IERC20 public immutable usdt;
+    IERC20 public immutable i_USDT;
 
     /// @notice USDC-USDT liquidity pair
-    IVVSPair public immutable usdcUsdtPair;
+    IVVSPair public immutable i_USDC_USDT_PAIR;
+
+    // =============================================================
+    //                       STATE VARIABLES
+    // =============================================================
 
     /// @notice SavingsVault contract (only it can deposit/withdraw)
-    address public savingsVault;
+    address public s_savingsVault;
 
     /// @notice Track liquidity tokens per user
-    mapping(address => uint256) public userLiquidityTokens;
+    mapping(address => uint256) public s_userLiquidityTokens;
 
     /// @notice Total liquidity tokens managed by this strategy
-    uint256 public totalLiquidityTokens;
+    uint256 public s_totalLiquidityTokens;
 
     /// @notice Slippage tolerance (in basis points, e.g., 50 = 0.5%)
-    uint256 public slippageTolerance = 50; // 0.5%
+    uint256 public s_slippageTolerance = 50; // 0.5%
 
     // =============================================================
     //                          EVENTS
@@ -111,8 +115,13 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
     // =============================================================
 
     modifier onlyVault() {
-        if (msg.sender != savingsVault) revert VVSYieldStrategy__OnlyVault();
+        _checkVault();
         _;
+    }
+
+    // Internal function for modifier (reduces bytecode size)
+    function _checkVault() internal view {
+        if (msg.sender != s_savingsVault) revert VVSYieldStrategy__OnlyVault();
     }
 
     // =============================================================
@@ -131,14 +140,14 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
             revert VVSYieldStrategy__ZeroAddress();
         }
 
-        vvsRouter = IVVSRouter(_vvsRouter);
-        usdc = IERC20(_usdc);
-        usdt = IERC20(_usdt);
-        usdcUsdtPair = IVVSPair(_usdcUsdtPair);
+        i_VVS_ROUTER = IVVSRouter(_vvsRouter);
+        i_USDC = IERC20(_usdc);
+        i_USDT = IERC20(_usdt);
+        i_USDC_USDT_PAIR = IVVSPair(_usdcUsdtPair);
 
         // Approve router to spend tokens (set to max for gas efficiency)
-        usdc.approve(_vvsRouter, type(uint256).max);
-        usdt.approve(_vvsRouter, type(uint256).max);
+        i_USDC.approve(_vvsRouter, type(uint256).max);
+        i_USDT.approve(_vvsRouter, type(uint256).max);
     }
 
     // =============================================================
@@ -156,12 +165,12 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
         if (amount == 0) revert VVSYieldStrategy__ZeroAmount();
 
         // Transfer USDC from vault to this contract
-        usdc.safeTransferFrom(msg.sender, address(this), amount);
+        i_USDC.safeTransferFrom(msg.sender, address(this), amount);
 
         // Split USDC 50/50 to USDC/USDT
         // We need to swap half of USDC to USDT first
         uint256 halfAmount = amount / 2;
-        uint256 usdtAmount = _swapUSDCToUSDT(halfAmount);
+        uint256 usdtAmount = _swapUsdcToUsdt(halfAmount);
 
         // Add liquidity to VVS (USDC-USDT pool)
         uint256 usdcUsed;
@@ -169,8 +178,8 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
         (usdcUsed, usdtUsed, liquidityTokens) = _addLiquidity(halfAmount, usdtAmount);
 
         // Track LP tokens for user
-        userLiquidityTokens[user] += liquidityTokens;
-        totalLiquidityTokens += liquidityTokens;
+        s_userLiquidityTokens[user] += liquidityTokens;
+        s_totalLiquidityTokens += liquidityTokens;
 
         emit Deposited(user, amount, liquidityTokens);
 
@@ -191,7 +200,7 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
         returns (uint256 usdcAmount)
     {
         if (liquidityTokens == 0) revert VVSYieldStrategy__ZeroAmount();
-        if (userLiquidityTokens[user] < liquidityTokens) {
+        if (s_userLiquidityTokens[user] < liquidityTokens) {
             revert VVSYieldStrategy__InsufficientLiquidity();
         }
 
@@ -199,17 +208,17 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
         (uint256 usdcReceived, uint256 usdtReceived) = _removeLiquidity(liquidityTokens);
 
         // Convert all USDT back to USDC
-        uint256 usdcFromSwap = _swapUSDTToUSDC(usdtReceived);
+        uint256 usdcFromSwap = _swapUsdtToUsdc(usdtReceived);
 
         // Total USDC to return
         usdcAmount = usdcReceived + usdcFromSwap;
 
         // Update tracking
-        userLiquidityTokens[user] -= liquidityTokens;
-        totalLiquidityTokens -= liquidityTokens;
+        s_userLiquidityTokens[user] -= liquidityTokens;
+        s_totalLiquidityTokens -= liquidityTokens;
 
         // Transfer USDC back to vault
-        usdc.safeTransfer(msg.sender, usdcAmount);
+        i_USDC.safeTransfer(msg.sender, usdcAmount);
 
         emit Withdrawn(user, liquidityTokens, usdcAmount);
 
@@ -225,15 +234,15 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
      * @param usdcAmount Amount of USDC to swap
      * @return usdtAmount Amount of USDT received
      */
-    function _swapUSDCToUSDT(uint256 usdcAmount) internal returns (uint256 usdtAmount) {
+    function _swapUsdcToUsdt(uint256 usdcAmount) internal returns (uint256 usdtAmount) {
         address[] memory path = new address[](2);
-        path[0] = address(usdc);
-        path[1] = address(usdt);
+        path[0] = address(i_USDC);
+        path[1] = address(i_USDT);
 
         // Calculate minimum output with slippage tolerance
-        uint256 minOutput = (usdcAmount * (10000 - slippageTolerance)) / 10000;
+        uint256 minOutput = (usdcAmount * (10000 - s_slippageTolerance)) / 10000;
 
-        uint256[] memory amounts = vvsRouter.swapExactTokensForTokens(
+        uint256[] memory amounts = i_VVS_ROUTER.swapExactTokensForTokens(
             usdcAmount, minOutput, path, address(this), block.timestamp + 15 minutes
         );
 
@@ -245,14 +254,14 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
      * @param usdtAmount Amount of USDT to swap
      * @return usdcAmount Amount of USDC received
      */
-    function _swapUSDTToUSDC(uint256 usdtAmount) internal returns (uint256 usdcAmount) {
+    function _swapUsdtToUsdc(uint256 usdtAmount) internal returns (uint256 usdcAmount) {
         address[] memory path = new address[](2);
-        path[0] = address(usdt);
-        path[1] = address(usdc);
+        path[0] = address(i_USDT);
+        path[1] = address(i_USDC);
 
-        uint256 minOutput = (usdtAmount * (10000 - slippageTolerance)) / 10000;
+        uint256 minOutput = (usdtAmount * (10000 - s_slippageTolerance)) / 10000;
 
-        uint256[] memory amounts = vvsRouter.swapExactTokensForTokens(
+        uint256[] memory amounts = i_VVS_ROUTER.swapExactTokensForTokens(
             usdtAmount, minOutput, path, address(this), block.timestamp + 15 minutes
         );
 
@@ -272,12 +281,12 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
         returns (uint256 usdcUsed, uint256 usdtUsed, uint256 liquidity)
     {
         // Calculate minimum amounts with slippage tolerance
-        uint256 usdcMin = (usdcAmount * (10000 - slippageTolerance)) / 10000;
-        uint256 usdtMin = (usdtAmount * (10000 - slippageTolerance)) / 10000;
+        uint256 usdcMin = (usdcAmount * (10000 - s_slippageTolerance)) / 10000;
+        uint256 usdtMin = (usdtAmount * (10000 - s_slippageTolerance)) / 10000;
 
-        (usdcUsed, usdtUsed, liquidity) = vvsRouter.addLiquidity(
-            address(usdc),
-            address(usdt),
+        (usdcUsed, usdtUsed, liquidity) = i_VVS_ROUTER.addLiquidity(
+            address(i_USDC),
+            address(i_USDT),
             usdcAmount,
             usdtAmount,
             usdcMin,
@@ -297,12 +306,12 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
      */
     function _removeLiquidity(uint256 liquidity) internal returns (uint256 usdcAmount, uint256 usdtAmount) {
         // Approve pair tokens to router
-        IERC20(address(usdcUsdtPair)).approve(address(vvsRouter), liquidity);
+        IERC20(address(i_USDC_USDT_PAIR)).approve(address(i_VVS_ROUTER), liquidity);
 
         // Calculate minimum amounts (set to 0 for simplicity, can be improved)
-        (usdcAmount, usdtAmount) = vvsRouter.removeLiquidity(
-            address(usdc),
-            address(usdt),
+        (usdcAmount, usdtAmount) = i_VVS_ROUTER.removeLiquidity(
+            address(i_USDC),
+            address(i_USDT),
             liquidity,
             0, // Accept any amount (can be improved with price oracle)
             0,
@@ -324,24 +333,24 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
      * @dev This is an approximation based on LP token share
      */
     function getUserValue(address user) external view returns (uint256 usdcValue) {
-        uint256 userLiquidity = userLiquidityTokens[user];
+        uint256 userLiquidity = s_userLiquidityTokens[user];
         if (userLiquidity == 0) return 0;
 
         // Get total reserves in the pool
-        (uint112 reserve0, uint112 reserve1,) = usdcUsdtPair.getReserves();
-        uint256 totalSupply = usdcUsdtPair.totalSupply();
+        (uint112 reserve0, uint112 reserve1,) = i_USDC_USDT_PAIR.getReserves();
+        uint256 totalSupply = i_USDC_USDT_PAIR.totalSupply();
 
         // Determine which reserve is USDC
-        address token0 = usdcUsdtPair.token0();
-        uint256 usdcReserve = (token0 == address(usdc)) ? reserve0 : reserve1;
-        uint256 usdtReserve = (token0 == address(usdc)) ? reserve1 : reserve0;
+        address token0 = i_USDC_USDT_PAIR.token0();
+        uint256 usdcReserve = (token0 == address(i_USDC)) ? reserve0 : reserve1;
+        uint256 usdtReserve = (token0 == address(i_USDC)) ? reserve1 : reserve0;
 
         // Calculate user's share of reserves
-        uint256 userUSDC = (usdcReserve * userLiquidity) / totalSupply;
-        uint256 userUSDT = (usdtReserve * userLiquidity) / totalSupply;
+        uint256 userUsdc = (usdcReserve * userLiquidity) / totalSupply;
+        uint256 userUsdt = (usdtReserve * userLiquidity) / totalSupply;
 
         // Return total value in USDC (assume 1:1 USDC:USDT for simplicity)
-        return userUSDC + userUSDT;
+        return userUsdc + userUsdt;
     }
 
     /**
@@ -358,6 +367,39 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
         return 0;
     }
 
+    /**
+     * @notice Get user's liquidity tokens
+     * @param user Address of user
+     * @return LP tokens owned by user
+     */
+    function userLiquidityTokens(address user) external view returns (uint256) {
+        return s_userLiquidityTokens[user];
+    }
+
+    /**
+     * @notice Get total liquidity tokens
+     * @return Total LP tokens managed
+     */
+    function totalLiquidityTokens() external view returns (uint256) {
+        return s_totalLiquidityTokens;
+    }
+
+    /**
+     * @notice Get savings vault address
+     * @return Savings vault contract address
+     */
+    function savingsVault() external view returns (address) {
+        return s_savingsVault;
+    }
+
+    /**
+     * @notice Get slippage tolerance
+     * @return Slippage in basis points
+     */
+    function slippageTolerance() external view returns (uint256) {
+        return s_slippageTolerance;
+    }
+
     // =============================================================
     //                     ADMIN FUNCTIONS
     // =============================================================
@@ -369,8 +411,8 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
      */
     function setSavingsVault(address _savingsVault) external onlyOwner {
         if (_savingsVault == address(0)) revert VVSYieldStrategy__ZeroAddress();
-        address oldVault = savingsVault;
-        savingsVault = _savingsVault;
+        address oldVault = s_savingsVault;
+        s_savingsVault = _savingsVault;
         emit SavingsVaultUpdated(oldVault, _savingsVault);
     }
 
@@ -381,8 +423,8 @@ contract VVSYieldStrategy is ReentrancyGuard, Ownable {
      */
     function setSlippageTolerance(uint256 _slippageTolerance) external onlyOwner {
         if (_slippageTolerance > 500) revert VVSYieldStrategy__SlippageTooHigh(); // Max 5%
-        uint256 oldTolerance = slippageTolerance;
-        slippageTolerance = _slippageTolerance;
+        uint256 oldTolerance = s_slippageTolerance;
+        s_slippageTolerance = _slippageTolerance;
         emit SlippageToleranceUpdated(oldTolerance, _slippageTolerance);
     }
 }
