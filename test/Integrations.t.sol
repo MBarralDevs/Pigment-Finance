@@ -167,4 +167,25 @@ contract IntegrationTest is Test {
 
         vm.stopPrank();
     }
+
+    function testAutoSaveRoutesToYield() public {
+        vm.startPrank(alice);
+
+        vault.createAccount(100e6, 500e6, SavingsVault.TrustMode.MANUAL);
+
+        // Approve for auto-save
+        usdc.approve(address(vault), 100e6);
+
+        // Warp time to allow save
+        vm.warp(block.timestamp + 1 days);
+
+        // Execute auto-save
+        vault.autoSave(alice, 100e6);
+
+        // Check went to yield
+        uint256 lpTokens = strategy.userLiquidityTokens(alice);
+        assertGt(lpTokens, 0);
+
+        vm.stopPrank();
+    }
 }
