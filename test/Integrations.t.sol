@@ -118,4 +118,53 @@ contract IntegrationTest is Test {
 
         vm.stopPrank();
     }
+
+    function testMultipleUsersWithYield() public {
+        // Alice deposits
+        vm.startPrank(alice);
+        vault.createAccount(100e6, 500e6, SavingsVault.TrustMode.MANUAL);
+        usdc.approve(address(vault), 1000e6);
+        vault.deposit(1000e6);
+        vm.stopPrank();
+
+        // Bob deposits
+        vm.startPrank(bob);
+        vault.createAccount(200e6, 1000e6, SavingsVault.TrustMode.MANUAL);
+        usdc.approve(address(vault), 2000e6);
+        vault.deposit(2000e6);
+        vm.stopPrank();
+
+        // Check balances
+        uint256 aliceBalance = vault.getUserTotalBalance(alice);
+        uint256 bobBalance = vault.getUserTotalBalance(bob);
+
+        // Bob should have ~2x Alice
+        assertGe(bobBalance, aliceBalance * 19 / 10); // Allow 10% variance
+        assertLe(bobBalance, aliceBalance * 21 / 10);
+
+        // Both should have LP tokens
+        assertGt(strategy.userLiquidityTokens(alice), 0);
+        assertGt(strategy.userLiquidityTokens(bob), 0);
+    }
+
+    function testFullWithdrawClearsYieldPosition() public {
+        vm.startPrank(alice);
+
+        vault.createAccount(100e6, 500e6, SavingsVault.TrustMode.MANUAL);
+        usdc.approve(address(vault), 1000e6);
+        vault.deposit(1000e6);
+
+        // Withdraw everything
+        vault.withdraw(1000e6);
+
+        // Should have no LP tokens left (or very minimal dust)
+        uint256 lpTokens = strategy.userLiquidityTokens(alice);
+        assertLe(lpTokens, 100, "Should have minimal LP tokens left");
+
+        // Account balance should be 0
+        SavingsVault.UserAccount memory account = vault.getAccount(alice);
+        assertEq(account.currentBalance, 0);
+
+        vm.stopPrank();
+    }
 }
