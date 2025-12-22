@@ -73,4 +73,49 @@ contract IntegrationTest is Test {
 
         vm.stopPrank();
     }
+
+    function testWithdrawPullsFromYield() public {
+        vm.startPrank(alice);
+
+        // Setup: deposit first
+        vault.createAccount(100e6, 500e6, SavingsVault.TrustMode.MANUAL);
+        usdc.approve(address(vault), 1000e6);
+        vault.deposit(1000e6);
+
+        uint256 balanceBefore = usdc.balanceOf(alice);
+
+        // Withdraw
+        vault.withdraw(500e6);
+
+        uint256 balanceAfter = usdc.balanceOf(alice);
+
+        // Check received USDC
+        assertEq(balanceAfter - balanceBefore, 500e6);
+
+        // Check account balance updated
+        SavingsVault.UserAccount memory account = vault.getAccount(alice);
+        assertEq(account.currentBalance, 500e6);
+
+        // Check still has some LP tokens
+        uint256 lpTokens = strategy.userLiquidityTokens(alice);
+        assertGt(lpTokens, 0, "Should still have some LP tokens");
+
+        vm.stopPrank();
+    }
+
+    function testGetUserTotalBalanceIncludesYield() public {
+        vm.startPrank(alice);
+
+        vault.createAccount(100e6, 500e6, SavingsVault.TrustMode.MANUAL);
+        usdc.approve(address(vault), 1000e6);
+        vault.deposit(1000e6);
+
+        uint256 totalBalance = vault.getUserTotalBalance(alice);
+
+        // Should be close to 1000e6 (allow for small variance)
+        assertGe(totalBalance, 900e6);
+        assertLe(totalBalance, 1100e6);
+
+        vm.stopPrank();
+    }
 }
