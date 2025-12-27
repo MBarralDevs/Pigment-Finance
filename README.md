@@ -1,66 +1,88 @@
-## Foundry
+# AI Savings Agent - Cronos x402 Hackathon
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Automated savings agent that bridges Crypto.com users to DeFi via intelligent savings automation and VVS Finance yield generation.
 
-Foundry consists of:
+## 🏗️ Project Structure
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
+```
+ai-savings-agent/
+├── contracts/          # Foundry smart contracts
+│   ├── src/           # Contract source files
+│   ├── test/          # Contract tests
+│   ├── lib/           # Dependencies (OpenZeppelin)
+│   └── foundry.toml   # Foundry config
+├── backend/           # Node.js backend API
+│   ├── src/           # TypeScript source
+│   └── package.json   # Dependencies
+├── lib/               # Foundry libraries (git submodules)
+└── package.json       # Root package.json (workspace manager)
 ```
 
-### Test
+## 🚀 Quick Start
 
-```shell
-$ forge test
+### Smart Contracts
+
+```bash
+cd contracts
+forge build
+forge test -vvv
 ```
 
-### Format
+### Backend API
 
-```shell
-$ forge fmt
+```bash
+cd backend
+npm install
+npm run dev
 ```
 
-### Gas Snapshots
+## 📝 Development
 
-```shell
-$ forge snapshot
+### Prerequisites
+
+- Node.js 20+
+- Foundry
+- Git
+
+### Install Dependencies
+
+```bash
+# Install root dependencies
+npm install
+
+# Install backend dependencies
+cd backend && npm install
 ```
 
-### Anvil
+### Run Tests
 
-```shell
-$ anvil
+```bash
+# Smart contract tests
+npm run test:contracts
+
+# Backend tests (when implemented)
+npm run test:backend
 ```
 
-### Deploy
+## 🔧 Configuration
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
+### Contracts
 
-### Cast
+- Configure in `contracts/foundry.toml`
+- Environment variables in `contracts/.env`
 
-```shell
-$ cast <subcommand>
-```
+### Backend
 
-### Help
+- Copy `backend/.env.example` to `backend/.env`
+- Fill in required values
 
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+## 📚 Documentation
+
+- [Smart Contracts](/contracts/README.md)
+- [Backend API](/backend/README.md)
+
+## 🏆 Hackathon
+
+**Track:** Cronos x402 - Main Track  
+**Prize:** $24K Cronos Ignition Builder Residency  
+**Timeline:** Dec 12, 2024 - Jan 23, 2025

@@ -1,0 +1,12 @@
+{
+  "name": "ai-savings-agent",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["backend"],
+  "scripts": {
+    "test:contracts": "cd contracts && forge test -vvv",
+    "build:contracts": "cd contracts && forge build",
+    "test:backend": "cd backend && npm test",
+    "dev:backend": "cd backend && npm run dev"
+  }
+}
