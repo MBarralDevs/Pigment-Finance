@@ -1,64 +1,105 @@
 import { ethers } from 'ethers';
 import { config } from '../config/env';
 
-// ABIs (Application Binary Interface) - tells ethers.js how to interact with contracts
-// We only include the functions we actually use (not the entire ABI)
 const SAVINGS_VAULT_ABI = [
-  // View function - reads user account data (doesn't cost gas)
   'function getAccount(address user) view returns (tuple(uint256 totalDeposited, uint256 totalWithdrawn, uint256 currentBalance, uint256 weeklyGoal, uint256 safetyBuffer, uint256 lastSaveTimestamp, bool isActive, uint8 trustMode))',
-  
-  // State-changing function - deposits on behalf of user (costs gas)
   'function depositFor(address user, uint256 amount)',
-  
-  // View function - checks if user can save (rate limit)
   'function canAutoSave(address user) view returns (bool)',
-  
-  // View function - gets total balance including yield
   'function getUserTotalBalance(address user) view returns (uint256)',
-  
-  // Event - emitted when deposit happens (we can listen to this)
   'event Deposited(address indexed user, uint256 amount, uint256 newBalance)',
 ];
 
 const USDC_ABI = [
-  // Standard ERC20 functions we need
   'function balanceOf(address account) view returns (uint256)',
   'function decimals() view returns (uint8)',
 ];
 
-
 export class BlockchainService {
-  // Private properties - only accessible within this class
-  private provider: ethers.JsonRpcProvider;  // Connection to blockchain
-  private backendWallet: ethers.Wallet;      // Our wallet (can sign txs)
-  private savingsVault: ethers.Contract;     // SavingsVault contract instance
-  private usdc: ethers.Contract;             // USDC contract instance
+  private provider: ethers.JsonRpcProvider;
+  private backendWallet: ethers.Wallet;
+  private savingsVault: ethers.Contract;
+  private usdc: ethers.Contract;
 
   constructor() {
-    // 1. Initialize provider (connection to Cronos)
     this.provider = new ethers.JsonRpcProvider(config.cronosRpcUrl);
+    this.backendWallet = new ethers.Wallet(config.backendPrivateKey, this.provider);
     
-    // 2. Initialize backend wallet
-    // Wallet = private key + provider = can sign transactions
-    this.backendWallet = new ethers.Wallet(
-      config.backendPrivateKey,  // Your private key from .env
-      this.provider              // Connected to Cronos
-    );
-
-    // 3. Initialize SavingsVault contract
     this.savingsVault = new ethers.Contract(
-      config.savingsVaultAddress,  // Where the contract lives
-      SAVINGS_VAULT_ABI,            // How to talk to it
-      this.backendWallet            // Who's calling it (for state changes)
+      config.savingsVaultAddress,
+      SAVINGS_VAULT_ABI,
+      this.backendWallet
     );
 
-    // 4. Initialize USDC contract (read-only, no wallet needed)
     this.usdc = new ethers.Contract(
       config.usdcAddress,
       USDC_ABI,
-      this.provider  // Just provider, not wallet (we only read)
+      this.provider
     );
 
     console.log('✅ Blockchain service initialized');
     console.log('Backend wallet address:', this.backendWallet.address);
-  }}
+  }
+
+  async getUserAccount(userAddress: string) {
+    try {
+      const account = await this.savingsVault.getAccount(userAddress);
+      return {
+        totalDeposited: account[0],
+        totalWithdrawn: account[1],
+        currentBalance: account[2],
+        weeklyGoal: account[3],
+        safetyBuffer: account[4],
+        lastSaveTimestamp: account[5],
+        isActive: account[6],
+        trustMode: account[7],
+      };
+    } catch (error) {
+      console.error('Error getting user account:', error);
+      throw error;
+    }
+  }
+
+  async canAutoSave(userAddress: string): Promise<boolean> {
+    try {
+      return await this.savingsVault.canAutoSave(userAddress);
+    } catch (error) {
+      console.error('Error checking canAutoSave:', error);
+      return false;
+    }
+  }
+
+  async getUserTotalBalance(userAddress: string): Promise<bigint> {
+    try {
+      return await this.savingsVault.getUserTotalBalance(userAddress);
+    } catch (error) {
+      console.error('Error getting user total balance:', error);
+      throw error;
+    }
+  }
+
+  async depositFor(userAddress: string, amount: bigint) {
+    try {
+      console.log(`Calling depositFor: user=${userAddress}, amount=${amount.toString()}`);
+      const tx = await this.savingsVault.depositFor(userAddress, amount);
+      console.log('Transaction sent:', tx.hash);
+      const receipt = await tx.wait();
+      console.log('Transaction confirmed:', receipt.hash);
+      return receipt;
+    } catch (error) {
+      console.error('Error calling depositFor:', error);
+      throw error;
+    }
+  }
+
+  parseUsdcAmount(amount: string): bigint {
+    return ethers.parseUnits(amount, 6);
+  }
+
+  formatUsdcAmount(amount: bigint): string {
+    return ethers.formatUnits(amount, 6);
+  }
+
+  getBackendAddress(): string {
+    return this.backendWallet.address;
+  }
+}
