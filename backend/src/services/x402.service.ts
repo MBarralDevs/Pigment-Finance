@@ -36,7 +36,7 @@ export class X402Service {
   /**
    * Verify and settle x402 payment
    * 
-   * FIXED: Now properly decodes payment header before sending to Facilitator
+   * FIXED: Decode header and pass parsed payload to SDK
    */
   async verifyAndSettle(
     paymentId: string,
@@ -48,11 +48,18 @@ export class X402Service {
       console.log('  Payment ID:', paymentId);
       console.log('  Network:', this.network);
 
-      // ✅ FIX: Decode the payment header first
-      const decodedPayload = this.parsePaymentHeader(paymentHeader);
-      
-      if (!decodedPayload) {
-        console.error('❌ Failed to parse payment header');
+      // Decode and parse the payment header
+      let parsedPayload: any;
+      try {
+        const decoded = Buffer.from(paymentHeader, 'base64').toString('utf-8');
+        parsedPayload = JSON.parse(decoded);
+        
+        console.log('✅ Payment header decoded');
+        console.log('  From:', parsedPayload.from);
+        console.log('  To:', parsedPayload.to);
+        console.log('  Value:', (parseInt(parsedPayload.value) / 1_000_000).toFixed(2), 'USDC');
+      } catch (error) {
+        console.error('❌ Failed to parse payment header:', error);
         return {
           ok: false,
           error: 'invalid_payment_header',
@@ -60,13 +67,10 @@ export class X402Service {
         };
       }
 
-      console.log('  Decoded payment from:', decodedPayload.from);
-      console.log('  Amount:', (parseInt(decodedPayload.value) / 1_000_000).toFixed(2), 'USDC');
-
-      // Build request body for Facilitator
+      // Build request body with PARSED payload (not base64)
       const body: VerifyRequest = {
         x402Version: 1,
-        paymentHeader, // Send the base64 header as-is
+        paymentHeader: parsedPayload, // ✅ Send parsed object, not base64
         paymentRequirements,
       };
 
@@ -112,23 +116,22 @@ export class X402Service {
       return {
         ok: false,
         error: error.message || 'Payment processing failed',
-        details: { stack: error.stack },
+        details: { 
+          message: error.message,
+          stack: error.stack 
+        },
       };
     }
   }
 
   /**
    * Parse X-PAYMENT header
-   * 
-   * ✅ IMPROVED: Better error handling and validation
    */
   parsePaymentHeader(headerValue: string): any | null {
     try {
-      // Decode base64
       const decoded = Buffer.from(headerValue, 'base64').toString('utf-8');
       const payload = JSON.parse(decoded);
 
-      // Validate required fields
       const required = [
         'scheme',
         'network',
@@ -144,17 +147,9 @@ export class X402Service {
       const missing = required.filter(field => !payload[field]);
       
       if (missing.length > 0) {
-        console.error(`❌ Missing required fields in payment header: ${missing.join(', ')}`);
+        console.error(`❌ Missing required fields: ${missing.join(', ')}`);
         return null;
       }
-
-      // Log what we parsed (for debugging)
-      console.log('📄 Parsed payment header:');
-      console.log('  Scheme:', payload.scheme);
-      console.log('  Network:', payload.network);
-      console.log('  From:', payload.from);
-      console.log('  To:', payload.to);
-      console.log('  Value:', payload.value);
 
       return payload;
     } catch (error) {
@@ -163,9 +158,6 @@ export class X402Service {
     }
   }
 
-  /**
-   * Create 402 Payment Required response
-   */
   createPaymentRequirements(
     amount: string,
     paymentId: string
