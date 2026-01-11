@@ -32,6 +32,7 @@ export class X402Service {
 
   /**
    * Verify and settle x402 payment using direct API calls
+   * ✅ Using correct endpoints: /v2/x402/verify and /v2/x402/settle
    */
   async verifyAndSettle(
     paymentId: string,
@@ -57,10 +58,10 @@ export class X402Service {
         paymentRequirements,
       };
 
-      // Step 1: Verify
-      console.log('🔍 Verifying payment via API...');
+      // Step 1: Verify - ✅ Correct endpoint
+      console.log('🔍 Verifying payment via /v2/x402/verify...');
       const verifyResponse = await axios.post(
-        `${this.facilitatorApiUrl}/v1/payments/verify`,
+        `${this.facilitatorApiUrl}/v2/x402/verify`,
         requestBody,
         {
           headers: { 'Content-Type': 'application/json' },
@@ -81,10 +82,10 @@ export class X402Service {
 
       console.log('✅ Payment verified');
 
-      // Step 2: Settle
-      console.log('⛓️  Settling payment via API...');
+      // Step 2: Settle - ✅ Correct endpoint
+      console.log('⛓️  Settling payment via /v2/x402/settle...');
       const settleResponse = await axios.post(
-        `${this.facilitatorApiUrl}/v1/payments/settle`,
+        `${this.facilitatorApiUrl}/v2/x402/settle`,
         requestBody,
         {
           headers: { 'Content-Type': 'application/json' },
