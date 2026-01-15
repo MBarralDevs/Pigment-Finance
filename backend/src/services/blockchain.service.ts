@@ -120,6 +120,18 @@ export class BlockchainService {
   }
 
   /**
+ * Get user's USDC balance in their wallet (not in vault)
+ */
+async getWalletUsdcBalance(userAddress: string): Promise<bigint> {
+  try {
+    return await this.usdc.balanceOf(userAddress);
+  } catch (error) {
+    console.error('Error getting wallet USDC balance:', error);
+    return 0n;
+  }
+}
+
+  /**
    * Convert human-readable USDC to wei (6 decimals)
    * Example: "25.50" -> 25500000
    */

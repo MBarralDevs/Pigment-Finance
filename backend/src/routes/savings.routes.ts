@@ -54,7 +54,6 @@ router.get('/user/:address', async (req: Request, res: Response) => {
   try {
     const { address } = req.params;
 
-    // Validate Ethereum address
     if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
       return res.status(400).json({
         success: false,
@@ -67,7 +66,9 @@ router.get('/user/:address', async (req: Request, res: Response) => {
     const totalBalance = await blockchainService.getUserTotalBalance(address);
     const canSave = await blockchainService.canAutoSave(address);
 
-    // Format amounts for display
+    // NEW: Get wallet USDC balance
+    const walletBalance = await blockchainService.getWalletUsdcBalance(address);
+
     const response: ApiResponse = {
       success: true,
       data: {
@@ -83,6 +84,7 @@ router.get('/user/:address', async (req: Request, res: Response) => {
           trustMode: account.trustMode === 0 ? 'MANUAL' : 'AUTO',
         },
         totalBalance: blockchainService.formatUsdcAmount(totalBalance),
+        walletBalance: blockchainService.formatUsdcAmount(walletBalance), // NEW
         canAutoSave: canSave,
       },
     };
