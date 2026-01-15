@@ -81,25 +81,25 @@ export function AccountInfo({ account, isLoading }: AccountInfoProps) {
         gap: '1rem' 
       }}>
         
-        {/* ============================================
-            WALLET BALANCE (USDC in user's wallet)
-            ============================================ */}
-        <div>
-          <strong>Wallet Balance:</strong>
-          <p style={{ fontSize: '1.5rem', margin: '0.5rem 0' }}>
-            {account.totalBalance} USDC
-          </p>
-        </div>
+       {/* ============================================
+    WALLET BALANCE (USDC in user's wallet)
+    ============================================ */}
+<div>
+  <strong>Wallet Balance:</strong>
+  <p style={{ fontSize: '1.5rem', margin: '0.5rem 0' }}>
+    {account.walletBalance} USDC  {/* Changed from totalBalance */}
+  </p>
+</div>
 
-        {/* ============================================
-            VAULT BALANCE (USDC saved in vault)
-            ============================================ */}
-        <div>
-          <strong>Vault Balance:</strong>
-          <p style={{ fontSize: '1.5rem', margin: '0.5rem 0' }}>
-            {account.account.currentBalance} USDC
-          </p>
-        </div>
+{/* ============================================
+    VAULT BALANCE (USDC saved in vault)
+    ============================================ */}
+<div>
+  <strong>Vault Balance:</strong>
+  <p style={{ fontSize: '1.5rem', margin: '0.5rem 0' }}>
+    {account.account.currentBalance} USDC
+  </p>
+</div>
 
         {/* ============================================
             WEEKLY GOAL (How much to save per week)

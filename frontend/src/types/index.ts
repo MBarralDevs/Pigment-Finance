@@ -8,17 +8,18 @@ import type { CronosNetwork, Contract } from '@crypto.com/facilitator-client';
 export interface UserAccount {
   address: string;
   account: {
-    totalDeposited: string;      // e.g. "0.00"
-    totalWithdrawn: string;       // e.g. "0.00"
-    currentBalance: string;       // e.g. "0.00"
-    weeklyGoal: string;           // e.g. "25.00"
-    safetyBuffer: string;         // e.g. "100.00"
-    lastSaveTimestamp: string;    // Unix timestamp as string
-    isActive: boolean;            // Account active?
-    trustMode: 'MANUAL' | 'AUTO'; // Trust mode
+    totalDeposited: string;
+    totalWithdrawn: string;
+    currentBalance: string;
+    weeklyGoal: string;
+    safetyBuffer: string;
+    lastSaveTimestamp: string;
+    isActive: boolean;
+    trustMode: 'MANUAL' | 'AUTO';
   };
-  totalBalance: string;           // Wallet USDC balance e.g. "500.00"
-  canAutoSave: boolean;           // Can save now? (rate limit check)
+  totalBalance: string;           // Vault balance (from yield strategy)
+  walletBalance: string;           // NEW: Wallet USDC balance
+  canAutoSave: boolean;
 }
 
 /**

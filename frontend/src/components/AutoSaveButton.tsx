@@ -53,7 +53,7 @@ export function AutoSaveButton({ userAddress, canAutoSave, onSuccess }: AutoSave
       // 3. POST /api/save (with payment)
       // 4. Backend verifies + settles
       // 5. Success!
-      await executeSave(userAddress, '25.00');
+      await executeSave(userAddress, '5.00');  // Changed from '25.00'
       
       // Success! Refresh the account data in parent component
       onSuccess();
@@ -112,7 +112,7 @@ export function AutoSaveButton({ userAddress, canAutoSave, onSuccess }: AutoSave
           - "Processing..." when isLoading = true
           - "Save $25 to Vault" when idle
         */}
-        {isLoading ? 'Processing...' : 'Save $25 to Vault'}
+        {isLoading ? 'Processing...' : 'Save $5 to Vault'}  //Changed from 'Save $25...'
       </button>
 
       {/* ============================================
