@@ -9,6 +9,7 @@
     "start": "node dist/server.js",
     "test:api": "tsx src/tests/test-api.ts",
     "test:blockchain": "tsx src/tests/test-blockchain.ts",
+    "approve-vault": "tsx scripts/approve-vault.ts",
     "test:create-user": "tsx src/tests/test-create-user.ts",
     "test:setup-user": "tsx src/tests/test-setup-user.ts",
     "test:decision": "tsx src/tests/test-decision-engine.ts",

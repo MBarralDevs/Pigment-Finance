@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { WalletConnect } from './components/WalletConnect';
 import { Dashboard } from './components/Dashboard';
+import { ApprovalButton } from './components/ApprovalButton';
 import { AutoSaveButton } from './components/AutoSaveButton';
 import { api } from './services/api';
 import type { UserAccount } from './types';
@@ -10,7 +11,7 @@ import './App.css';
  * Main App Component
  * 
  * This is the "orchestrator" that:
- * 1. Manages global state (wallet address, account data)
+ * 1. Manages global state (wallet address, account data, approval status)
  * 2. Coordinates communication between components
  * 3. Handles data loading and refreshing
  * 
@@ -18,6 +19,7 @@ import './App.css';
  * App
  * ├── WalletConnect (connects wallet)
  * ├── Dashboard (displays account data in modern layout)
+ * ├── ApprovalButton (approves USDC spending - NEW!)
  * └── AutoSaveButton (triggers save)
  */
 function App() {
@@ -44,6 +46,13 @@ function App() {
    * Used to show "Loading..." state
    */
   const [isLoadingAccount, setIsLoadingAccount] = useState(false);
+
+  /**
+   * Has user approved vault to spend USDC?
+   * - false initially / when not approved
+   * - true after approval transaction confirms
+   */
+  const [isApproved, setIsApproved] = useState(false);
 
   // ============================================
   // DATA LOADING
@@ -131,6 +140,18 @@ function App() {
     }
   };
 
+  /**
+   * Handle approval status change
+   * 
+   * Called by ApprovalButton when approval status changes
+   * 
+   * @param approved - Whether vault is approved to spend USDC
+   */
+  const handleApprovalChange = (approved: boolean) => {
+    console.log('🔐 Approval status changed:', approved);
+    setIsApproved(approved);
+  };
+
   // ============================================
   // RENDER
   // ============================================
@@ -164,9 +185,15 @@ function App() {
       </div>
 
       {/* ============================================
-          MAIN CONTENT (Dashboard + Save Button)
+          MAIN CONTENT (Dashboard + Approval + Save Button)
           
           Layout: Vertical stack with spacing
+          
+          Flow:
+          1. User connects wallet
+          2. Dashboard loads
+          3. User approves vault (if not already approved)
+          4. User can save
           ============================================ */}
       <div style={{ 
         display: 'flex', 
@@ -181,13 +208,27 @@ function App() {
           - "Welcome" screen (if not connected)
           - "Loading your savings..." (if loading)
           - Full dashboard with metrics, progress, and details (if loaded)
-          
-          Replaces the old AccountInfo component with a richer,
-          more visual dashboard interface
         */}
         <Dashboard 
           account={account} 
           isLoading={isLoadingAccount} 
+        />
+
+        {/* 
+          APPROVAL BUTTON
+          
+          Shows:
+          - Nothing if wallet not connected
+          - Loading spinner while checking approval
+          - Green success card if already approved
+          - Orange approval button if not approved
+          
+          This MUST be completed before user can save.
+          Only appears after wallet is connected.
+        */}
+        <ApprovalButton 
+          userAddress={userAddress}
+          onApprovalChange={handleApprovalChange}
         />
         
         {/* 
@@ -200,13 +241,40 @@ function App() {
           
           Disabled when:
           - Wallet not connected (userAddress = null)
+          - Vault not approved (isApproved = false) - NEW!
           - Rate limited (canAutoSave = false)
+          
+          Only show if:
+          - Wallet is connected
+          - Vault is approved
         */}
-        <AutoSaveButton
-          userAddress={userAddress}
-          canAutoSave={account?.canAutoSave ?? false}
-          onSuccess={handleSaveSuccess}
-        />
+        {userAddress && isApproved && (
+          <AutoSaveButton
+            userAddress={userAddress}
+            canAutoSave={account?.canAutoSave ?? false}
+            onSuccess={handleSaveSuccess}
+          />
+        )}
+
+        {/* 
+          APPROVAL REMINDER
+          
+          If wallet connected but not approved, show a reminder
+          below where the save button would be
+        */}
+        {userAddress && !isApproved && (
+          <div style={{
+            padding: '1.5rem',
+            background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.1) 0%, rgba(245, 124, 0, 0.1) 100%)',
+            border: '1px solid rgba(255, 152, 0, 0.3)',
+            borderRadius: '12px',
+            textAlign: 'center',
+            color: '#F57C00',
+            fontSize: '1rem',
+          }}>
+            <strong>⬆️ Please approve the vault above to enable saving</strong>
+          </div>
+        )}
       </div>
     </div>
   );
