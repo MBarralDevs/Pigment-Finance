@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { WalletConnect } from './components/WalletConnect';
-import { AccountInfo } from './components/AccountInfo';
+import { Dashboard } from './components/Dashboard';
 import { AutoSaveButton } from './components/AutoSaveButton';
 import { api } from './services/api';
 import type { UserAccount } from './types';
@@ -17,7 +17,7 @@ import './App.css';
  * Component hierarchy:
  * App
  * ├── WalletConnect (connects wallet)
- * ├── AccountInfo (displays account data)
+ * ├── Dashboard (displays account data in modern layout)
  * └── AutoSaveButton (triggers save)
  */
 function App() {
@@ -137,7 +137,7 @@ function App() {
   
   return (
     <div style={{ 
-      maxWidth: '800px',      // Don't stretch too wide
+      maxWidth: '1200px',      // Wider for dashboard layout
       margin: '0 auto',        // Center horizontally
       padding: '2rem'          // Space around edges
     }}>
@@ -164,7 +164,7 @@ function App() {
       </div>
 
       {/* ============================================
-          MAIN CONTENT (Account Info + Save Button)
+          MAIN CONTENT (Dashboard + Save Button)
           
           Layout: Vertical stack with spacing
           ============================================ */}
@@ -175,14 +175,17 @@ function App() {
       }}>
         
         {/* 
-          ACCOUNT INFO DISPLAY
+          DASHBOARD DISPLAY
           
           Shows:
-          - "Connect wallet to view account" (if not connected)
-          - "Loading account..." (if loading)
-          - Full account details (if loaded)
+          - "Welcome" screen (if not connected)
+          - "Loading your savings..." (if loading)
+          - Full dashboard with metrics, progress, and details (if loaded)
+          
+          Replaces the old AccountInfo component with a richer,
+          more visual dashboard interface
         */}
-        <AccountInfo 
+        <Dashboard 
           account={account} 
           isLoading={isLoadingAccount} 
         />
