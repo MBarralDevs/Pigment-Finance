@@ -97,11 +97,11 @@ contract DeployMockVVS is Script {
         // ============================================
         // STEP 8: Set Strategy in Vault
         // ============================================
-        console2.log("Step 8: Setting Strategy in Vault...");
-        SavingsVault vault = SavingsVault(vaultAddress);
-        vault.setYieldStrategy(address(strategy));
-        console2.log("  Vault configured to use Strategy");
-        console2.log("");
+        // console2.log("Step 8: Setting Strategy in Vault...");
+        // SavingsVault vault = SavingsVault(vaultAddress);
+        // vault.setYieldStrategy(address(strategy));
+        // console2.log("  Vault configured to use Strategy");
+        // console2.log("");
 
         vm.stopBroadcast();
 
