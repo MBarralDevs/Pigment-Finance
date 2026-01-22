@@ -8,7 +8,9 @@ import type { UserAccount } from './types';
 import './App.css';
 
 /**
- * Main App Component
+ * Pigment - Main App Component
+ * 
+ * Drop by drop, build your financial masterpiece
  * 
  * This is the "orchestrator" that:
  * 1. Manages global state (wallet address, account data, approval status)
@@ -157,125 +159,134 @@ function App() {
   // ============================================
   
   return (
-    <div style={{ 
-      maxWidth: '1200px',      // Wider for dashboard layout
-      margin: '0 auto',        // Center horizontally
-      padding: '2rem'          // Space around edges
-    }}>
+    <div className="app">
       
       {/* ============================================
-          HEADER
+          HEADER - Clean professional design with PNG logo
           ============================================ */}
-      <h1>Pigment Finance</h1>
-      <p style={{ color: '#666', marginBottom: '2rem' }}>
-        Automated DeFi savings powered by Cronos x402 payments
-      </p>
+      <header>
+        <div className="header-content">
+          <a href="/" className="logo">
+            {/* PNG Logo */}
+            <div className="logo-icon">
+              <img 
+                src="/logo.png" 
+                alt="Pigment Logo" 
+                className="logo-image"
+              />
+            </div>
+            <div className="logo-text">
+              <h1>Pigment</h1>
+              <p>Drop by drop</p>
+            </div>
+          </a>
+        </div>
+      </header>
 
       {/* ============================================
-          WALLET CONNECTION
-          
-          Shows:
-          - "Connect MetaMask" button if not connected
-          - "Connected: 0xABC...123" if connected
-          
-          When user connects, calls handleWalletConnect
+          MAIN CONTENT
           ============================================ */}
-      <div style={{ marginBottom: '2rem' }}>
+      
+      {!userAddress ? (
+        /* ==========================================
+           WALLET CONNECTION (Not Connected State)
+           
+           Shows:
+           - "Connect MetaMask" button if not connected
+           - "Connected: 0xABC...123" if connected
+           
+           When user connects, calls handleWalletConnect
+           ========================================== */
         <WalletConnect onConnect={handleWalletConnect} />
-      </div>
-
-      {/* ============================================
-          MAIN CONTENT (Dashboard + Approval + Save Button)
-          
-          Layout: Vertical stack with spacing
-          
-          Flow:
-          1. User connects wallet
-          2. Dashboard loads
-          3. User approves vault (if not already approved)
-          4. User can save
-          ============================================ */}
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: '1.5rem'  // Space between components
-      }}>
-        
-        {/* 
-          DASHBOARD DISPLAY
-          
-          Shows:
-          - "Welcome" screen (if not connected)
-          - "Loading your savings..." (if loading)
-          - Full dashboard with metrics, progress, and details (if loaded)
-        */}
-        <Dashboard 
-          account={account} 
-          isLoading={isLoadingAccount} 
-        />
-
-        {/* 
-          APPROVAL BUTTON
-          
-          Shows:
-          - Nothing if wallet not connected
-          - Loading spinner while checking approval
-          - Green success card if already approved
-          - Orange approval button if not approved
-          
-          This MUST be completed before user can save.
-          Only appears after wallet is connected.
-        */}
-        <ApprovalButton 
-          userAddress={userAddress}
-          onApprovalChange={handleApprovalChange}
-        />
-        
-        {/* 
-          AUTO SAVE BUTTON
-          
-          The main action button that:
-          - Triggers x402 payment flow
-          - Shows status updates
-          - Calls handleSaveSuccess when done
-          
-          Disabled when:
-          - Wallet not connected (userAddress = null)
-          - Vault not approved (isApproved = false) - NEW!
-          - Rate limited (canAutoSave = false)
-          
-          Only show if:
-          - Wallet is connected
-          - Vault is approved
-        */}
-        {userAddress && isApproved && (
-          <AutoSaveButton
-            userAddress={userAddress}
-            canAutoSave={account?.canAutoSave ?? false}
-            onSuccess={handleSaveSuccess}
+      ) : (
+        /* ==========================================
+           DASHBOARD VIEW (Connected State)
+           
+           Layout: Vertical stack with spacing
+           
+           Flow:
+           1. User connects wallet
+           2. Dashboard loads
+           3. User approves vault (if not already approved)
+           4. User can save
+           ========================================== */
+        <div className="content">
+          {/* 
+            DASHBOARD DISPLAY
+            
+            Shows:
+            - "Welcome" screen (if not connected)
+            - "Loading your savings..." (if loading)
+            - Full dashboard with metrics, progress, and details (if loaded)
+          */}
+          <Dashboard 
+            account={account} 
+            isLoading={isLoadingAccount} 
           />
-        )}
 
-        {/* 
-          APPROVAL REMINDER
+          {/* 
+            APPROVAL BUTTON
+            
+            Shows:
+            - Nothing if wallet not connected
+            - Loading spinner while checking approval
+            - Green success card if already approved
+            - Orange approval button if not approved
+            
+            This MUST be completed before user can save.
+            Only appears after wallet is connected.
+          */}
+          <ApprovalButton 
+            userAddress={userAddress}
+            onApprovalChange={handleApprovalChange}
+          />
           
-          If wallet connected but not approved, show a reminder
-          below where the save button would be
-        */}
-        {userAddress && !isApproved && (
-          <div style={{
-            padding: '1.5rem',
-            background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.1) 0%, rgba(245, 124, 0, 0.1) 100%)',
-            border: '1px solid rgba(255, 152, 0, 0.3)',
-            borderRadius: '12px',
-            textAlign: 'center',
-            color: '#F57C00',
-            fontSize: '1rem',
-          }}>
-            <strong>⬆️ Please approve the vault above to enable saving</strong>
-          </div>
-        )}
-      </div>
+          {/* 
+            AUTO SAVE BUTTON
+            
+            The main action button that:
+            - Triggers x402 payment flow
+            - Shows status updates
+            - Calls handleSaveSuccess when done
+            
+            Disabled when:
+            - Wallet not connected (userAddress = null)
+            - Vault not approved (isApproved = false) - NEW!
+            - Rate limited (canAutoSave = false)
+            
+            Only show if:
+            - Wallet is connected
+            - Vault is approved
+          */}
+          {userAddress && isApproved && (
+            <AutoSaveButton
+              userAddress={userAddress}
+              canAutoSave={account?.canAutoSave ?? false}
+              onSuccess={handleSaveSuccess}
+            />
+          )}
+
+          {/* 
+            APPROVAL REMINDER
+            
+            If wallet connected but not approved, show a reminder
+            below where the save button would be
+          */}
+          {userAddress && !isApproved && (
+            <div style={{
+              padding: '1.5rem',
+              background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.1) 0%, rgba(245, 124, 0, 0.1) 100%)',
+              border: '1px solid rgba(255, 152, 0, 0.3)',
+              borderRadius: '12px',
+              textAlign: 'center',
+              color: '#F57C00',
+              fontSize: '1rem',
+            }}>
+              <strong>⬆️ Please approve the vault above to enable saving</strong>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

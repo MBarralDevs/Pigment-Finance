@@ -1,383 +1,379 @@
-/**
- * Enhanced Styles for AI Savings Agent
- * 
- * Features:
- * - Smooth animations and transitions
- * - Glassmorphism effects
- * - Mobile responsive design
- * - Modern gradient backgrounds
- * - Hover effects
- */
+/* ====================================
+   PIGMENT - Clean Professional Design
+   Inspired by Revolut, Wise, etc.
+   ==================================== */
 
-/* ============================================
-   RESET & BASE STYLES
-   ============================================ */
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* 1. ROOT STYLES */
+:root {
+  --primary: #667eea;
+  --primary-dark: #5568d3;
+  --secondary: #764ba2;
+  --background: #f8f9fa;
+  --card-bg: #ffffff;
+  --text-primary: #1a1a1a;
+  --text-secondary: #6c757d;
+  --border: #e9ecef;
+  --shadow: rgba(0, 0, 0, 0.08);
 }
 
+/* 2. BODY & HTML */
 body {
+  margin: 0;
+  padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  background-attachment: fixed;
-  color: #333;
-  line-height: 1.6;
-  min-height: 100vh;
+  background: var(--background);
 }
 
 #root {
   min-height: 100vh;
 }
 
-/* ============================================
-   TYPOGRAPHY
-   ============================================ */
+/* 3. APP CONTAINER - Clean white/light background */
+.app {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+  padding: 0;
+}
 
-h1 {
-  font-size: 2.5rem;
-  font-weight: 800;
-  color: #1a1a1a;
-  margin-bottom: 0.5rem;
+/* 4. HEADER - Clean and professional like Revolut */
+header {
+  background: white;
+  padding: 1.5rem 2rem;
+  box-shadow: 0 2px 8px var(--shadow);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid var(--border);
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Logo */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+}
+
+.logo-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* PNG Logo Image */
+.logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* SVG Logo - Simple colorful drop */
+.logo-svg {
+  width: 40px;
+  height: 40px;
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.logo-text h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+}
+
+.logo-text p {
+  font-size: 0.75rem;
+  margin: 0;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* 5. MAIN CONTENT WRAPPER */
+.content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+}
+
+/* 6. WELCOME CONTAINER - Clean and minimal */
+.welcome-container {
+  max-width: 900px;
+  margin: 4rem auto;
+  text-align: center;
+}
+
+.welcome-title {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 1rem 0;
   letter-spacing: -1px;
 }
 
-h2 {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #2a2a2a;
-  margin-bottom: 1rem;
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-h3 {
+.welcome-subtitle {
   font-size: 1.25rem;
-  font-weight: 600;
-  color: #3a3a3a;
+  color: var(--text-secondary);
+  margin: 0 0 3rem 0;
+  font-weight: 400;
 }
 
-p {
-  margin-bottom: 1rem;
+/* 7. FEATURE GRID - Clean cards like Wise */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
 }
 
-/* ============================================
-   ANIMATIONS
-   ============================================ */
-
-@keyframes spin {
-  0% { 
-    transform: rotate(0deg); 
-  }
-  100% { 
-    transform: rotate(360deg); 
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px) scale(1);
-  }
-  50% {
-    transform: translateY(-20px) scale(1.05);
-  }
-}
-
-@keyframes bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes shine {
-  0% {
-    left: -100%;
-  }
-  100% {
-    left: 200%;
-  }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.05);
-    opacity: 0.8;
-  }
-}
-
-@keyframes glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(102, 126, 234, 0.6);
-  }
-}
-
-/* ============================================
-   CARD HOVER EFFECTS
-   ============================================ */
-
-.stat-card {
-  animation: fadeIn 0.6s ease-out;
-}
-
-.stat-card:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.12) !important;
-}
-
-/* ============================================
-   LINKS
-   ============================================ */
-
-a {
-  color: #667eea;
-  text-decoration: none;
+.feature-card {
+  background: var(--card-bg);
+  padding: 2rem;
+  border-radius: 16px;
+  text-align: left;
+  border: 1px solid var(--border);
   transition: all 0.2s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px var(--shadow);
+  border-color: var(--primary);
+}
+
+.feature-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.feature-card h3 {
+  font-size: 1.125rem;
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
-a:hover {
-  color: #4752C4;
-  text-decoration: underline;
+.feature-card p {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.6;
 }
 
-a:visited {
-  color: #764ba2;
+/* 8. WALLET CONNECT SECTION - Revolut-style */
+.wallet-connect-section {
+  background: var(--card-bg);
+  padding: 3rem;
+  border-radius: 20px;
+  text-align: center;
+  border: 1px solid var(--border);
+  max-width: 500px;
+  margin: 0 auto;
 }
 
-/* ============================================
-   BUTTONS
-   ============================================ */
+.metamask-fox {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  display: inline-block;
+}
 
-button {
-  font-family: inherit;
-  font-size: inherit;
-  transition: all 0.3s ease;
+.connect-description {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin: 0 0 2rem 0;
+  line-height: 1.6;
+}
+
+/* 9. CONNECT BUTTON - Clean and professional */
+.connect-button {
+  background: var(--primary);
+  color: white;
   border: none;
-  outline: none;
+  padding: 1rem 2.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
-button:not(:disabled):hover {
+.connect-button:hover {
+  background: var(--primary-dark);
   transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
 }
 
-button:not(:disabled):active {
+.connect-button:active {
   transform: translateY(0);
 }
 
-button:disabled {
-  opacity: 0.6;
+.connect-button:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
-/* ============================================
-   LOADING SPINNER
-   ============================================ */
-
+/* 10. LOADING SPINNER */
 .loading-spinner {
-  animation: spin 1s linear infinite;
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
-/* ============================================
-   GLASSMORPHISM EFFECT
-   ============================================ */
-
-.glass {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
-/* ============================================
-   SCROLLBAR STYLING
-   ============================================ */
-
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+/* 11. ERROR MESSAGE */
+.error-message {
+  background: #fff5f5;
+  color: #c62828;
+  padding: 1rem;
+  border-radius: 12px;
+  margin-top: 1rem;
+  font-size: 0.9375rem;
+  border: 1px solid #ffcdd2;
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
+/* 12. FOOTNOTE */
+.connect-footnote {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: 1.5rem;
 }
 
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 10px;
+.connect-footnote a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #4752C4 0%, #5a3470 100%);
+.connect-footnote a:hover {
+  text-decoration: underline;
 }
 
-/* ============================================
-   RESPONSIVE DESIGN
-   ============================================ */
+/* 13. DASHBOARD - Clean card design */
+.dashboard {
+  background: var(--card-bg);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
 
-/* Mobile - Stack components vertically */
+/* 14. RESPONSIVE */
 @media (max-width: 768px) {
-  h1 {
-    font-size: 2rem;
-  }
-
-  h2 {
-    font-size: 1.5rem;
-  }
-
-  h3 {
-    font-size: 1.1rem;
-  }
-
-  /* Make all grid layouts single column on mobile */
-  div[style*="grid-template-columns"] {
-    grid-template-columns: 1fr !important;
-  }
-
-  /* Adjust padding for mobile */
-  body {
+  header {
     padding: 1rem;
   }
 
-  /* Reduce card padding on mobile */
-  .stat-card {
-    padding: 1.5rem !important;
+  .header-content {
+    gap: 0.5rem;
   }
 
-  /* Stack hero elements */
-  div[style*="flex-direction"] {
-    flex-wrap: wrap;
+  .logo-text h1 {
+    font-size: 1.25rem;
+  }
+
+  .logo-text p {
+    font-size: 0.65rem;
+  }
+
+  .content {
+    padding: 2rem 1rem;
+  }
+
+  .welcome-container {
+    margin: 2rem auto;
+  }
+
+  .welcome-title {
+    font-size: 2rem;
+  }
+
+  .welcome-subtitle {
+    font-size: 1rem;
+  }
+
+  .feature-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .wallet-connect-section {
+    padding: 2rem 1.5rem;
+  }
+
+  .connect-button {
+    width: 100%;
+    justify-content: center;
   }
 }
 
-/* Tablet */
-@media (min-width: 769px) and (max-width: 1024px) {
-  h1 {
-    font-size: 2.25rem;
-  }
-}
-
-/* Desktop - Large screens */
-@media (min-width: 1400px) {
-  h1 {
-    font-size: 3rem;
-  }
-}
-
-/* ============================================
-   UTILITY CLASSES
-   ============================================ */
-
+/* 15. UTILITY CLASSES */
 .text-center {
   text-align: center;
 }
 
-.mt-1 {
-  margin-top: 0.5rem;
-}
-
 .mt-2 {
-  margin-top: 1rem;
-}
-
-.mb-1 {
-  margin-bottom: 0.5rem;
+  margin-top: 2rem;
 }
 
 .mb-2 {
-  margin-bottom: 1rem;
+  margin-bottom: 2rem;
 }
 
-.fade-in {
-  animation: fadeIn 0.6s ease-out;
+/* 16. SMOOTH TRANSITIONS */
+* {
+  box-sizing: border-box;
 }
 
-.slide-in {
-  animation: slideIn 0.5s ease-out;
+a {
+  color: var(--primary);
+  text-decoration: none;
 }
 
-.pulse {
-  animation: pulse 2s ease-in-out infinite;
+a:hover {
+  color: var(--primary-dark);
 }
 
-/* ============================================
-   PRINT STYLES
-   ============================================ */
-
-@media print {
-  body {
-    background: white;
-  }
-
-  button {
-    display: none;
-  }
-}
-
-/* ============================================
-   ACCESSIBILITY
-   ============================================ */
-
-/* Focus styles for keyboard navigation */
-button:focus-visible,
-a:focus-visible {
-  outline: 3px solid #667eea;
-  outline-offset: 2px;
-}
-
-/* Reduced motion for users who prefer it */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  body {
-    background: white;
-  }
-
-  button {
-    border: 2px solid currentColor;
-  }
+/* Remove all excessive animations for professional look */
+.decorative-circle,
+.floating-emoji {
+  display: none;
 }
