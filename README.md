@@ -88,6 +88,9 @@ ai-savings-agent/
 │
 ├── backend/                 # Node.js API server
 │   ├── src/
+│   │   ├── agent/                     # AI Agent Decision
+│   │   │   ├── decision-engine.ts     # Decision Engine for Agent
+│   │   │   ├── types.ts               # Agent Types
 │   │   ├── routes/                    # API endpoints
 │   │   ├── services/
 │   │   │   ├── blockchain.service.ts  # Smart contract interactions
@@ -121,7 +124,7 @@ ai-savings-agent/
 
 ```bash
 # Clone repository
-git clone <repository-url>
+git clone https://github.com/MBarralDevs/ai-saving-agent
 cd ai-savings-agent
 
 # Install dependencies
@@ -480,9 +483,9 @@ MIT License - see LICENSE file for details
 
 For questions or support:
 
-- **GitHub Issues**: [Repository Issues](link-to-issues)
-- **Twitter**: [@your-handle](link)
-- **Email**: your-email@example.com
+- **GitHub Issues**: [\[Repository Issues\]](https://github.com/MBarralDevs/ai-saving-agent/issues)(link-to-issues)
+- **Twitter**: [@MBarralWeb3](link)
+- **Email**: mbarraldevs@outlook.com
 
 ---
 
