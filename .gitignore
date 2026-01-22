@@ -4,6 +4,12 @@ contracts/out/
 contracts/broadcast/
 contracts/lib/
 
+# Dependencies
+node_modules/
+**/node_modules/
+.pnp
+.pnp.js
+
 # Node modules (from backend/)
 backend/node_modules/
 backend/dist/
@@ -13,6 +19,22 @@ backend/.env
 contracts/.env
 
 .env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+
+# Testing
+coverage/
+*.lcov
+.nyc_output/
+
+# Production Builds
+dist/
+build/
+out/
+*.log
+*.tgz
 
 # OS files
 .DS_Store
